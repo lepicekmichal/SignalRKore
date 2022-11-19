@@ -2,6 +2,7 @@ plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
     id("com.android.library")
+    id("com.vanniktech.maven.publish")
     `maven-publish`
 }
 
@@ -54,39 +55,9 @@ android {
     namespace = "eu.lepicekmichal.signalrkore"
 
     publishing {
-        singleVariant("release")
-
-        publications {
-            create<MavenPublication>("release") {
-                groupId = "eu.lepicekmichal.signalrkore"
-                artifactId = "core"
-                version = "0.0.1"
-
-                from(components["release"])
-
-                pom {
-                    name.set("SignalR Kore")
-                    description.set("Connect to SignalR Core server with library written in Kotlin and coroutines.")
-//                url.set("http://www.example.com/library")
-                    licenses {
-                        license {
-                            name.set("The Apache License, Version 2.0")
-                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                        }
-                    }
-                    developers {
-                        developer {
-                            id.set("lepicekmichal")
-                            name.set("Michal Lepíček")
-                        }
-                    }
-                    /*scm {
-                        connection.set("scm:git:git://example.com/my-library.git")
-                        developerConnection.set("scm:git:ssh://example.com/my-library.git")
-                        url.set("http://example.com/my-library/")
-                    }*/
-                }
-            }
+        singleVariant("release") {
+            withJavadocJar()
+            withSourcesJar()
         }
     }
 }
