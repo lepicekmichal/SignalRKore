@@ -1,6 +1,5 @@
 package eu.lepicekmichal.signalrkore
 
-import co.touchlab.stately.concurrency.AtomicLong
 import eu.lepicekmichal.signalrkore.transports.LongPollingTransport
 import eu.lepicekmichal.signalrkore.transports.ServerSentEventsTransport
 import eu.lepicekmichal.signalrkore.transports.WebSocketTransport
@@ -27,12 +26,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEmpty
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
@@ -59,21 +60,30 @@ class HubConnection private constructor(
     private val job = SupervisorJob()
     private val scope = CoroutineScope(job + dispatchers.io)
 
-    private val nextServerTimeout: AtomicLong = AtomicLong(0)
-    private val nextPingActivation: AtomicLong = AtomicLong(0)
-
-    private val pingTicker = flow {
-        while (true) {
-            val now = Clock.System.now().toEpochMilliseconds()
-            if (now > nextServerTimeout.get()) {
-                throw RuntimeException("Server timeout elapsed without receiving a message from the server.")
+    private val pingReset = MutableSharedFlow<Unit>()
+    private val pingTicker = pingReset
+        .onStart { emit(Unit) }
+        .flatMapLatest {
+            flow {
+                while (true) {
+                    emit(Unit)
+                    delay(KEEP_ALIVE_INTERVAL.milliseconds)
+                }
             }
-            if (now > nextPingActivation.get()) {
-                emit(Unit)
-            }
-            delay(TICK_RATE.milliseconds)
         }
-    }
+
+    private val serverTimeoutReset = MutableSharedFlow<Unit>()
+    private val serverTimeoutTicker = serverTimeoutReset
+        .onStart { emit(Unit) }
+        .flatMapLatest {
+            flow<Nothing> {
+                while (true) {
+                    delay(SERVER_TIMEOUT.milliseconds)
+                    throw RuntimeException("Server timeout elapsed without receiving a message from the server.")
+                }
+            }
+        }
+
     override val receivedInvocations = MutableSharedFlow<HubMessage.Invocation>()
     private val receivedCompletions = MutableSharedFlow<HubMessage.Completion>()
 
@@ -139,15 +149,20 @@ class HubConnection private constructor(
 
         _connectionState.value = HubConnectionState.CONNECTED
 
-        resetServerTimeout()
-
         if (negotiationTransport != TransportEnum.LongPolling) {
             scope.launch {
                 pingTicker
                     .catch { stop(it.message) }
                     .collect { sendHubMessageWithLock(message = HubMessage.Ping()) }
             }
+            scope.launch {
+                serverTimeoutTicker
+                    .catch { stop(it.message) }
+                    .collect()
+            }
         }
+
+        resetServerTimeout()
 
         scope.launch {
             transport.receive()
@@ -334,11 +349,11 @@ class HubConnection private constructor(
     }
 
     private fun resetServerTimeout() {
-        nextServerTimeout.set(Clock.System.now().toEpochMilliseconds() + SERVER_TIMEOUT)
+        serverTimeoutReset.tryEmit(Unit)
     }
 
     private fun resetKeepAlive() {
-        nextPingActivation.set(Clock.System.now().toEpochMilliseconds() + KEEP_ALIVE_INTERVAL)
+        pingReset.tryEmit(Unit)
     }
 
     private fun connectedCheck(method: String) {
@@ -352,6 +367,5 @@ class HubConnection private constructor(
         private const val MAX_NEGOTIATE_ATTEMPTS = 100
         private const val SERVER_TIMEOUT = 30 * 1000
         private const val KEEP_ALIVE_INTERVAL = 15 * 1000
-        private const val TICK_RATE = 1000
     }
 }

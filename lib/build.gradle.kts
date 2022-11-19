@@ -3,7 +3,6 @@ plugins {
     kotlin("plugin.serialization")
     id("com.android.library")
     id("com.vanniktech.maven.publish")
-    `maven-publish`
 }
 
 kotlin {
@@ -24,7 +23,6 @@ kotlin {
                 implementation("io.ktor:ktor-client-content-negotiation:2.1.3")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:2.1.3")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
-                implementation("co.touchlab:stately-concurrency:1.2.2")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
             }
         }
@@ -53,11 +51,4 @@ android {
     }
 
     namespace = "eu.lepicekmichal.signalrkore"
-
-    publishing {
-        singleVariant("release") {
-            withJavadocJar()
-            withSourcesJar()
-        }
-    }
 }

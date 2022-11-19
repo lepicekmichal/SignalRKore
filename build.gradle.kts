@@ -4,6 +4,7 @@ plugins {
     kotlin("plugin.serialization") version "1.7.20" apply false
     kotlin("multiplatform") version "1.7.20" apply false
     id("org.jetbrains.compose") version "1.2.0" apply false
+    id("com.vanniktech.maven.publish") version "0.22.0" apply false
 }
 
 buildscript {
