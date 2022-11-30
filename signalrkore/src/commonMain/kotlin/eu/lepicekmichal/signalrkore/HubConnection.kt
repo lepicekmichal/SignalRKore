@@ -6,7 +6,6 @@ import eu.lepicekmichal.signalrkore.transports.WebSocketTransport
 import eu.lepicekmichal.signalrkore.utils.dispatchers
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.websocket.*
@@ -18,6 +17,7 @@ import io.ktor.util.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
@@ -46,6 +46,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HubConnection private constructor(
     private val baseUrl: String,
     private val protocol: HubProtocol,
@@ -104,7 +105,7 @@ class HubConnection private constructor(
     ) : this(
         baseUrl = url.takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("A valid url is required."),
         protocol = protocol,
-        httpClient = (httpClient ?: HttpClient(CIO)).config {
+        httpClient = (httpClient ?: HttpClient()).config {
             install(WebSockets)
             install(HttpTimeout)
             install(ContentNegotiation) { json(Json) }

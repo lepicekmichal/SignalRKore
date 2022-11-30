@@ -2,6 +2,7 @@ package eu.lepicekmichal.signalrkore.transports
 
 import eu.lepicekmichal.signalrkore.Transport
 import eu.lepicekmichal.signalrkore.utils.dispatchers
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okio.BufferedSource
 import okio.Closeable
 import okio.IOException
@@ -27,7 +29,7 @@ interface Response : Closeable {
     }
 }
 
-internal expect class ServerSentEventsDelegate {
+internal expect class ServerSentEventsDelegate constructor() {
     fun get(
         url: String,
         headers: Map<String, String>,
@@ -64,7 +66,7 @@ internal class ServerSentEventsTransport(
                 onFailure = { continuation.resumeWithException(RuntimeException("Failed to connect.", it)) },
                 onSuccess = { response ->
                     scope.launch {
-                        response.use {
+                        try {
                             if (!response.isSuccessful) throw RuntimeException("Failed to connect.")
 
                             val body = response.body ?: throw RuntimeException("Failed to connect.")
@@ -73,12 +75,21 @@ internal class ServerSentEventsTransport(
 
                             continuation.resume(Unit)
 
-                            body.source().use { source ->
+                            val source = body.source()
+                            try {
                                 while (isActive) {
                                     if (!processNextEvent(source) && isActive && active) {
                                         throw IOException("Canceled")
                                     }
                                 }
+                            } finally {
+                                withContext(dispatchers.io) {
+                                    source.close()
+                                }
+                            }
+                        } finally {
+                            withContext(dispatchers.io) {
+                                response.close()
                             }
                         }
                     }
