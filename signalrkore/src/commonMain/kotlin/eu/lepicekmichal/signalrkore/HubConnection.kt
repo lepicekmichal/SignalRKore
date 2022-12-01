@@ -56,6 +56,7 @@ class HubConnection private constructor(
     private val headers: Map<String, String>,
     private val skipNegotiate: Boolean,
     private val json: Json,
+    override val logger: Logger,
 ) : HubCommunication() {
 
     private val job = SupervisorJob()
@@ -100,6 +101,7 @@ class HubConnection private constructor(
         headers: Map<String, String>,
         transportEnum: TransportEnum,
         json: Json,
+        logger: Logger,
     ) : this(
         baseUrl = url.takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("A valid url is required."),
         protocol = protocol,
@@ -113,6 +115,7 @@ class HubConnection private constructor(
         headers = headers,
         skipNegotiate = skipNegotiate,
         json = json,
+        logger = logger,
     )
 
     suspend fun start() {
@@ -152,7 +155,7 @@ class HubConnection private constructor(
             scope.launch {
                 pingTicker
                     .catch { stop(it.message) }
-                    .collect { sendHubMessageWithLock(message = HubMessage.Ping()) }
+                    .collect { sendHubMessage(message = HubMessage.Ping()) }
             }
             scope.launch {
                 serverTimeoutTicker
@@ -259,19 +262,20 @@ class HubConnection private constructor(
     suspend fun stop(errorMessage: String? = null) {
         if (connectionState.value == HubConnectionState.DISCONNECTED) return
 
-        println(errorMessage ?: "Stopping connection")
+        logger.log("[$baseUrl] ${errorMessage ?: "Stopping connection"}")
 
         transport.stop()
         job.cancelChildren()
     }
 
-    private fun sendHubMessageWithLock(message: HubMessage) {
+    private fun sendHubMessage(message: HubMessage) {
         if (connectionState.value != HubConnectionState.CONNECTED)
             throw RuntimeException("Trying to send and message while the connection is not active.")
 
         val serializedMessage: ByteArray = protocol.writeMessage(message)
         scope.launch {
             transport.send(serializedMessage)
+            logger.log("Sent invocation: $message")
             resetKeepAlive()
         }
     }
@@ -302,14 +306,14 @@ class HubConnection private constructor(
         connectedCheck("send")
 
         val invocationMessage = HubMessage.Invocation.NonBlocking(target = method, arguments = args)
-        sendHubMessageWithLock(invocationMessage)
+        sendHubMessage(invocationMessage)
     }
 
     override suspend fun invoke(method: String, args: List<JsonElement>) = internalInvoke(
         method = method,
         args = args,
         processSimple = { },
-        processResult = { println("Result of a completion message has been ignored: ${it.result}") },
+        processResult = { logger.log("Result of a completion message has been ignored: ${it.result}") },
     )
 
     override suspend fun <T : Any> invoke(result: KClass<T>, method: String, args: List<JsonElement>): T = internalInvoke(
@@ -338,7 +342,7 @@ class HubConnection private constructor(
         val invocationId = UUID.randomUUID()
 
         val invocationMessage = HubMessage.Invocation.Blocking(target = method, arguments = args, invocationId = invocationId)
-        sendHubMessageWithLock(invocationMessage)
+        sendHubMessage(invocationMessage)
 
         return when (val completion = receivedCompletions.filter { it.invocationId == invocationId }.first()) {
             is HubMessage.Completion.Error -> throw RuntimeException(completion.error)

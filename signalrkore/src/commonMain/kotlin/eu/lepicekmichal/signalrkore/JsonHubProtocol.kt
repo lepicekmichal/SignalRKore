@@ -6,7 +6,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-class JsonHubProtocol : HubProtocol {
+class JsonHubProtocol(private val logger: Logger) : HubProtocol {
 
     override val name: String = PROTOCOL_NAME
     override val version: Int = PROTOCOL_VERSION
@@ -23,7 +23,7 @@ class JsonHubProtocol : HubProtocol {
             .filter { it.isNotEmpty() }
             .map { str ->
                 try {
-                    println("AAAAAAAA parsed $str") //todo logging
+                    logger.log("Decoding message: $str")
                     json.decodeFromString(str)
                 } catch (ex: IOException) {
                     throw RuntimeException("Error reading JSON.", ex)
@@ -32,7 +32,7 @@ class JsonHubProtocol : HubProtocol {
     }
 
     override fun writeMessage(message: HubMessage): ByteArray =
-        (json.encodeToString(message).also { println("AAAAAAAA encoded $it") } + RECORD_SEPARATOR).toByteArray()
+        (json.encodeToString(message).also { logger.log("Encoded message: $it") } + RECORD_SEPARATOR).toByteArray()
 
     companion object {
         private const val PROTOCOL_NAME = "json"

@@ -9,10 +9,12 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 
-internal class WebSocketTransport(private val headers: Map<String, String>, private val client: HttpClient) : Transport {
+internal class WebSocketTransport(
+    private val headers: Map<String, String>,
+    private val client: HttpClient,
+) : Transport {
 
     private var session: WebSocketSession? = null
 
@@ -42,7 +44,6 @@ internal class WebSocketTransport(private val headers: Map<String, String>, priv
 
     override fun receive(): Flow<ByteArray> = session?.incoming
         ?.receiveAsFlow()
-        ?.onEach { println("AAAAAD $it") }
         ?.map { it.readBytes() } ?: throw IllegalStateException("WebSocket connection has not been started")
 
     override suspend fun stop() {

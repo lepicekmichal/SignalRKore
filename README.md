@@ -83,6 +83,19 @@ connection.on("broadcastMessage", Message::class) { message ->
 }
 ```
 
+## Keep up with connection status
+
+```kotlin
+connection.connectionState.collect {
+    when (it) {
+        is CONNECTED -> prinln("Yay, we online")
+        is DISCONNECTED -> prinln("Shut off!")
+        is CONNECTING -> prinln("Almost there")
+        is RECONNECTING -> prinln("Down again")
+    }
+} 
+```
+
 ## Connection configuration
 
 ```kotlin
@@ -96,6 +109,7 @@ HubConnectionBuilder
         handshakeResponseTimeout = ...
         headers = ...
         json = ...
+        logger = ...
     }
 ```
 
@@ -134,6 +148,16 @@ class MyHubProtocol : HubProtocol {
 }
 ```
 
+### Logs are available
+
+Just decide what to do with the message
+
+```kotlin
+logger = Logger {
+    Napier.v("SignalR Kore is saying: $it")
+}
+```
+
 ### Do not forget your own instance of Json
 
 If your kotlinx-serialization Json is cusomized or it has modules registered in it, then don't forget to pass it.
@@ -144,6 +168,7 @@ If your kotlinx-serialization Json is cusomized or it has modules registered in 
 - [ ] Documentation
 - [ ] Add example project
 - [ ] Separate server sent events to extra library as ktor does not support ServerSentEvents
-- [ ] Add proper logging
+- [x] Add logging
 - [ ] Error handling
 - [ ] Add tests
+- [ ] Implement streams

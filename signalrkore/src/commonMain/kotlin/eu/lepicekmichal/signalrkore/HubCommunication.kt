@@ -4,12 +4,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.serialization.json.JsonElement
 import kotlin.reflect.KClass
 
 abstract class HubCommunication {
 
     protected abstract val receivedInvocations: SharedFlow<HubMessage.Invocation>
+
+    protected abstract val logger: Logger
 
     protected abstract fun <T : Any> T.toJson(kClass: KClass<T>): JsonElement
 
@@ -693,14 +696,17 @@ abstract class HubCommunication {
         ),
     )
 
-    fun <T1> on(target: String, param1: KClass<T1>): Flow<T1> where T1 : Any =
+    private fun on(target: String): Flow<HubMessage.Invocation> =
         receivedInvocations
             .filter { it.target == target }
+            .onEach { logger.log("Received invocation: $it") }
+
+    fun <T1> on(target: String, param1: KClass<T1>): Flow<T1> where T1 : Any =
+        on(target)
             .map { it.arguments[0].fromJson(param1) }
 
     fun <T1, T2> on(target: String, param1: KClass<T1>, param2: KClass<T2>): Flow<OnResult2<T1, T2>> where T1 : Any, T2 : Any =
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .map {
                 OnResult2(
                     it.arguments[0].fromJson(param1),
@@ -714,8 +720,7 @@ abstract class HubCommunication {
         param2: KClass<T2>,
         param3: KClass<T3>
     ): Flow<OnResult3<T1, T2, T3>> where T1 : Any, T2 : Any, T3 : Any =
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .map {
                 OnResult3(
                     it.arguments[0].fromJson(param1),
@@ -731,8 +736,7 @@ abstract class HubCommunication {
         param3: KClass<T3>,
         param4: KClass<T4>
     ): Flow<OnResult4<T1, T2, T3, T4>> where T1 : Any, T2 : Any, T3 : Any, T4 : Any =
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .map {
                 OnResult4(
                     it.arguments[0].fromJson(param1),
@@ -750,8 +754,7 @@ abstract class HubCommunication {
         param4: KClass<T4>,
         param5: KClass<T5>
     ): Flow<OnResult5<T1, T2, T3, T4, T5>> where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any =
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .map {
                 OnResult5(
                     it.arguments[0].fromJson(param1),
@@ -771,8 +774,7 @@ abstract class HubCommunication {
         param5: KClass<T5>,
         param6: KClass<T6>
     ): Flow<OnResult6<T1, T2, T3, T4, T5, T6>> where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any =
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .map {
                 OnResult6(
                     it.arguments[0].fromJson(param1),
@@ -794,8 +796,7 @@ abstract class HubCommunication {
         param6: KClass<T6>,
         param7: KClass<T7>
     ): Flow<OnResult7<T1, T2, T3, T4, T5, T6, T7>> where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any =
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .map {
                 OnResult7(
                     it.arguments[0].fromJson(param1),
@@ -820,8 +821,7 @@ abstract class HubCommunication {
         param8: KClass<T8>
     ): Flow<OnResult8<T1, T2, T3, T4, T5, T6, T7, T8>> where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 :
     Any =
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .map {
                 OnResult8(
                     it.arguments[0].fromJson(param1),
@@ -836,14 +836,12 @@ abstract class HubCommunication {
             }
 
     suspend fun <T1> on(target: String, param1: KClass<T1>, callback: (T1) -> Unit) where T1 : Any {
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .collect { callback(it.arguments[0].fromJson(param1)) }
     }
 
     suspend fun <T1, T2> on(target: String, param1: KClass<T1>, param2: KClass<T2>, callback: (T1, T2) -> Unit) where T1 : Any, T2 : Any {
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .collect {
                 callback(
                     it.arguments[0].fromJson(param1),
@@ -859,8 +857,7 @@ abstract class HubCommunication {
         param3: KClass<T3>,
         callback: (T1, T2, T3) -> Unit
     ) where T1 : Any, T2 : Any, T3 : Any {
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .collect {
                 callback(
                     it.arguments[0].fromJson(param1),
@@ -878,8 +875,7 @@ abstract class HubCommunication {
         param4: KClass<T4>,
         callback: (T1, T2, T3, T4) -> Unit
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any {
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .collect {
                 callback(
                     it.arguments[0].fromJson(param1),
@@ -899,8 +895,7 @@ abstract class HubCommunication {
         param5: KClass<T5>,
         callback: (T1, T2, T3, T4, T5) -> Unit
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any {
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .collect {
                 callback(
                     it.arguments[0].fromJson(param1),
@@ -922,8 +917,7 @@ abstract class HubCommunication {
         param6: KClass<T6>,
         callback: (T1, T2, T3, T4, T5, T6) -> Unit
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any {
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .collect {
                 callback(
                     it.arguments[0].fromJson(param1),
@@ -947,8 +941,7 @@ abstract class HubCommunication {
         param7: KClass<T7>,
         callback: (T1, T2, T3, T4, T5, T6, T7) -> Unit
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any {
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .collect {
                 callback(
                     it.arguments[0].fromJson(param1),
@@ -974,8 +967,7 @@ abstract class HubCommunication {
         param8: KClass<T8>,
         callback: (T1, T2, T3, T4, T5, T6, T7, T8) -> Unit
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 : Any {
-        receivedInvocations
-            .filter { it.target == target }
+        on(target)
             .collect {
                 callback(
                     it.arguments[0].fromJson(param1),

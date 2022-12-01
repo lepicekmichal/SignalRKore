@@ -16,7 +16,7 @@ class HttpHubConnectionBuilder(private val url: String) {
     /**
      * The [HubProtocol] to be used by the [eu.lepicekmichal.signalrkore.HubConnection]
      */
-    var protocol: HubProtocol = JsonHubProtocol()
+    lateinit var protocol: HubProtocol
 
     /**
      * Boolean indicating if the [eu.lepicekmichal.signalrkore.HubConnection] should skip the negotiate step
@@ -48,16 +48,22 @@ class HttpHubConnectionBuilder(private val url: String) {
     var json: Json = Json
 
     /**
+     * Json instance for (de)serializing custom models coming through as payloads
+     */
+    var logger: Logger = Logger { }
+
+    /**
      * @return A new instance of [eu.lepicekmichal.signalrkore.HubConnection].
      */
     fun build(): HubConnection = HubConnection(
         url,
         skipNegotiate,
         httpClient,
-        protocol,
+        if (::protocol.isInitialized) protocol else JsonHubProtocol(logger),
         handshakeResponseTimeout,
         headers.toMap(),
         transportEnum,
         json,
+        logger,
     )
 }
