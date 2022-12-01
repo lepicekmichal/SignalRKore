@@ -18,6 +18,7 @@ import okio.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlin.jvm.Volatile
 
 interface Response : Closeable {
     val isSuccessful: Boolean
