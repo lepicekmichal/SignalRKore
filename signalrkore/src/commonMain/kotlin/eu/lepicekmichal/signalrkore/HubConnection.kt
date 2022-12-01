@@ -61,27 +61,25 @@ class HubConnection private constructor(
     private val job = SupervisorJob()
     private val scope = CoroutineScope(job + dispatchers.io)
 
-    private val pingReset = MutableSharedFlow<Unit>()
+    private val pingReset = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val pingTicker = pingReset
         .onStart { emit(Unit) }
         .flatMapLatest {
             flow {
                 while (true) {
-                    emit(Unit)
                     delay(KEEP_ALIVE_INTERVAL.milliseconds)
+                    emit(Unit)
                 }
             }
         }
 
-    private val serverTimeoutReset = MutableSharedFlow<Unit>()
+    private val serverTimeoutReset = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val serverTimeoutTicker = serverTimeoutReset
         .onStart { emit(Unit) }
         .flatMapLatest {
             flow<Nothing> {
-                while (true) {
-                    delay(SERVER_TIMEOUT.milliseconds)
-                    throw RuntimeException("Server timeout elapsed without receiving a message from the server.")
-                }
+                delay(SERVER_TIMEOUT.milliseconds)
+                throw RuntimeException("Server timeout elapsed without receiving a message from the server.")
             }
         }
 

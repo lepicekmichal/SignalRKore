@@ -102,9 +102,9 @@ HubConnectionBuilder
 ### Supported transports
 
 1. TransportEnum.All _(default, automatic choice based on availability)_
-2. TransportEnum.ServerSentEvents _(only for android)_
-3. TransportEnum.LongPolling
-4. TransportEnum.WebSockets
+2. TransportEnum.WebSockets
+3. TransportEnum.ServerSentEvents _(only for android)_
+4. TransportEnum.LongPolling
 
 ### Add your own ktor http client
 
@@ -144,4 +144,6 @@ If your kotlinx-serialization Json is cusomized or it has modules registered in 
 - [ ] Documentation
 - [ ] Add example project
 - [ ] Separate server sent events to extra library as ktor does not support ServerSentEvents
-- [ ] Fix bugs
+- [ ] Add proper logging
+- [ ] Error handling
+- [ ] Add tests
