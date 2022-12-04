@@ -7,12 +7,26 @@
 SignalR Kore is a library written in kotlin and coroutines connecting to ASP.NET Core server for real-time functionality brought to apps.
 Enables server-side code to push content to clients and vice-versa.Instantly.
 
-## KMP - why use **this** library
+## Why should you use **this** library
 
-* kotlin
-* coroutines
-* kotlinx-serializable
-* ktor
+|       | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) | SignalR Kore |
+| :---        |    :----:   |  :---: |
+| Written in  | Java | Kotlin |
+| KMM / KMP   | :heavy_multiplication_x: | Ready; on its way |
+| Network   | OkHttp only | Ktor with any engine pluggable * |
+| Async   | RxJava (mixed with callbacks) | Coroutines |
+| Serialization   | Gson (uncustomizable) | Kotlinx Serializable (custom instance) |
+| Streams   | :heavy_check_mark: | :heavy_multiplication_x: ** |
+| SSE   | :heavy_multiplication_x: | :heavy_check_mark: *** |
+| Connection status   | :heavy_multiplication_x: | :heavy_check_mark: |
+| Loggin   | SLF4J | Custom interface |
+| Tested through time / community   | :heavy_check_mark: | :heavy_multiplication_x: |
+
+_* Except for SSE which uses only OkHttp at the moment_  
+_** Not yet, part of plan, see TODO_  
+_*** Only for android for now_
+
+> Even though this library has many advabtages over official client library, SignalR Kore would not exist without it as implementation of the SignalR standard is much inspired in it. Therefore I thank the authors.
 
 ## Install
 
@@ -167,7 +181,7 @@ If your kotlinx-serialization Json is cusomized or it has modules registered in 
 - [x] Readme
 - [ ] Documentation
 - [ ] Add example project
-- [ ] Fix up ServerSentEvents' http client
+- [x] Fix up ServerSentEvents' http client
 - [x] Add logging
 - [ ] Error handling
 - [ ] Add tests

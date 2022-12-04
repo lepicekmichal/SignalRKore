@@ -3,7 +3,6 @@ package eu.lepicekmichal.signalrkore.transports
 import eu.lepicekmichal.signalrkore.Transport
 import eu.lepicekmichal.signalrkore.utils.dispatchers
 import io.ktor.client.*
-import io.ktor.client.engine.okhttp.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
