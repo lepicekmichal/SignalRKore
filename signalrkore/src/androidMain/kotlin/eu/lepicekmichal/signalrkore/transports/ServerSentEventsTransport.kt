@@ -1,5 +1,7 @@
 package eu.lepicekmichal.signalrkore.transports
 
+import io.ktor.client.*
+import io.ktor.client.engine.okhttp.*
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Headers.Companion.toHeaders
@@ -11,9 +13,9 @@ import okio.BufferedSource
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-internal actual class ServerSentEventsDelegate {
+internal actual class ServerSentEventsDelegate actual constructor(client: HttpClient) {
 
-    private val client = OkHttpClient.Builder().apply {
+    private val client = ((client.engine as? OkHttpEngine)?.config?.preconfigured?.newBuilder() ?: OkHttpClient.Builder()).apply {
         readTimeout(READ_TIMEOUT, TimeUnit.MILLISECONDS)
     }.build()
 

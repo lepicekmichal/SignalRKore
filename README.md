@@ -56,7 +56,7 @@ connection.on("broadcastMessage", String::class, String::class) { user, message 
 connection.stop()
 ```
 
-## Send and Receive complext data types
+## Send and Receive complex data types
 
 ```kotlin
 // Serializable class
@@ -117,7 +117,7 @@ HubConnectionBuilder
 
 1. TransportEnum.All _(default, automatic choice based on availability)_
 2. TransportEnum.WebSockets
-3. TransportEnum.ServerSentEvents _(only for android)_
+3. TransportEnum.ServerSentEvents _(only for android, only okhttp engine)_
 4. TransportEnum.LongPolling
 
 ### Add your own ktor http client
@@ -167,7 +167,7 @@ If your kotlinx-serialization Json is cusomized or it has modules registered in 
 - [x] Readme
 - [ ] Documentation
 - [ ] Add example project
-- [ ] Separate server sent events to extra library as ktor does not support ServerSentEvents
+- [ ] Fix up ServerSentEvents' http client
 - [x] Add logging
 - [ ] Error handling
 - [ ] Add tests

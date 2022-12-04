@@ -134,7 +134,7 @@ class HubConnection private constructor(
 
         transport = when (negotiationTransport) {
             TransportEnum.LongPolling -> LongPollingTransport(headers, httpClient)
-            TransportEnum.ServerSentEvents -> ServerSentEventsTransport(headers)
+            TransportEnum.ServerSentEvents -> ServerSentEventsTransport(headers, httpClient)
             else -> WebSocketTransport(headers, httpClient)
         }
 

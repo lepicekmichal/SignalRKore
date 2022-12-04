@@ -2,6 +2,8 @@ package eu.lepicekmichal.signalrkore.transports
 
 import eu.lepicekmichal.signalrkore.Transport
 import eu.lepicekmichal.signalrkore.utils.dispatchers
+import io.ktor.client.*
+import io.ktor.client.engine.okhttp.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -30,7 +32,7 @@ interface Response : Closeable {
     }
 }
 
-internal expect class ServerSentEventsDelegate constructor() {
+internal expect class ServerSentEventsDelegate constructor(client: HttpClient) {
     fun get(
         url: String,
         headers: Map<String, String>,
@@ -43,9 +45,10 @@ internal expect class ServerSentEventsDelegate constructor() {
 
 internal class ServerSentEventsTransport(
     private val headers: Map<String, String>,
+    client: HttpClient,
 ) : Transport {
 
-    private val delegate = ServerSentEventsDelegate()
+    private val delegate = ServerSentEventsDelegate(client)
 
     private val job = SupervisorJob()
     private val scope = CoroutineScope(job + dispatchers.io)

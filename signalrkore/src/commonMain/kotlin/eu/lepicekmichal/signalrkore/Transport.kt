@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.Flow
 internal interface Transport {
     suspend fun start(url: String)
     suspend fun send(message: ByteArray)
-    suspend fun sendHandshake(message: ByteArray) = send(message)
     fun receive(): Flow<ByteArray>
     suspend fun stop()
 }
