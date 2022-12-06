@@ -19,18 +19,23 @@ import io.ktor.utils.io.core.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
@@ -85,6 +90,7 @@ class HubConnection private constructor(
         }
 
     override val receivedInvocations = MutableSharedFlow<HubMessage.Invocation>()
+    private val receivedStreamItems = MutableSharedFlow<HubMessage.StreamItem>()
     private val receivedCompletions = MutableSharedFlow<HubMessage.Completion>()
 
     private val _connectionState: MutableStateFlow<HubConnectionState> = MutableStateFlow(HubConnectionState.DISCONNECTED)
@@ -289,8 +295,8 @@ class HubConnection private constructor(
                 is HubMessage.Close -> stop(message.error)
                 is HubMessage.Invocation -> receivedInvocations.emit(message)
                 is HubMessage.Ping -> Unit
-//                is CancelInvocationMessage ->
-//                is HubMessage.StreamItem ->
+                is HubMessage.CancelInvocation -> Unit // this should not happen according to standard
+                is HubMessage.StreamItem -> receivedStreamItems.emit(message)
                 is HubMessage.Completion -> receivedCompletions.emit(message)
             }
         }
@@ -330,6 +336,51 @@ class HubConnection private constructor(
             }
         },
     )
+
+    override fun <T : Any> stream(itemType: KClass<T>, method: String, args: List<JsonElement>): Flow<T> {
+        connectedCheck("stream")
+
+        val invocationId = UUID.randomUUID()
+
+        val invocationMessage = HubMessage.Invocation.Streaming(target = method, arguments = args, invocationId = invocationId)
+
+        return callbackFlow {
+            var completionReceived = false
+            val complete = {
+                completionReceived = true
+                cancel()
+            }
+
+            launch {
+                receivedStreamItems
+                    .filter { it.invocationId == invocationId }
+                    .map {
+                        try {
+                            it.item.fromJson(itemType)
+                        } catch (ex: SerializationException) {
+                            throw RuntimeException("Completion result could not be parsed as ${itemType.simpleName}: ${it.item}")
+                        } catch (ex: IllegalArgumentException) {
+                            throw RuntimeException("${itemType.simpleName} could not be initialized from the completion result: ${it.item}")
+                        }
+                    }
+                    .collect { if (!isClosedForSend) send(it) }
+            }
+
+            launch {
+                when (val completion = receivedCompletions.filter { it.invocationId == invocationId }.first()) {
+                    is HubMessage.Completion.Error -> throw RuntimeException(completion.error)
+                    is HubMessage.Completion.Resulted -> throw IllegalStateException("According to standard, stream cannot be finished with result")
+                    is HubMessage.Completion.Simple -> complete()
+                }
+            }
+
+            awaitClose {
+                if (!completionReceived) {
+                    sendHubMessage(HubMessage.CancelInvocation(invocationId))
+                }
+            }
+        }.onStart { sendHubMessage(invocationMessage) }
+    }
 
     private suspend fun <T : Any> internalInvoke(
         method: String,

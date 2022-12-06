@@ -24,6 +24,8 @@ abstract class HubCommunication {
 
     abstract suspend fun <T : Any> invoke(result: KClass<T>, method: String, args: List<JsonElement>): T
 
+    abstract fun <T : Any> stream(itemType: KClass<T>, method: String, args: List<JsonElement>): Flow<T>
+
     fun <S : Any> send(method: String, arg: S, argType: KClass<S>) =
         send(method, listOf(arg.toJson(argType)))
 
@@ -981,4 +983,262 @@ abstract class HubCommunication {
                 )
             }
     }
+
+    fun <A : Any> stream(itemType: KClass<A>, method: String) =
+        stream(itemType, method, emptyList())
+
+    fun <A : Any, S : Any> stream(itemType: KClass<A>, method: String, arg: S, argType: KClass<S>) =
+        stream(itemType, method, listOf(arg.toJson(argType)))
+
+    fun <A : Any, S : Any, T : Any> stream(
+        itemType: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg1Type: KClass<S>,
+        arg2Type: KClass<T>,
+    ) = stream(itemType, method, listOf(arg1.toJson(arg1Type), arg2.toJson(arg2Type)))
+
+    fun <A : Any, S : Any, T : Any, U : Any> stream(
+        itemType: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg3: U,
+        arg1Type: KClass<S>,
+        arg2Type: KClass<T>,
+        arg3Type: KClass<U>,
+    ) = stream(itemType, method, listOf(arg1.toJson(arg1Type), arg2.toJson(arg2Type), arg3.toJson(arg3Type)))
+
+    fun <A : Any, S : Any, T : Any, U : Any, V : Any> stream(
+        itemType: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg3: U,
+        arg4: V,
+        arg1Type: KClass<S>,
+        arg2Type: KClass<T>,
+        arg3Type: KClass<U>,
+        arg4Type: KClass<V>,
+    ) = stream(itemType, method, listOf(arg1.toJson(arg1Type), arg2.toJson(arg2Type), arg3.toJson(arg3Type), arg4.toJson(arg4Type)))
+
+    fun <A : Any, S : Any, T : Any, U : Any, V : Any, W : Any> stream(
+        itemType: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg3: U,
+        arg4: V,
+        arg5: W,
+        arg1Type: KClass<S>,
+        arg2Type: KClass<T>,
+        arg3Type: KClass<U>,
+        arg4Type: KClass<V>,
+        arg5Type: KClass<W>,
+    ) = stream(
+        itemType,
+        method,
+        listOf(arg1.toJson(arg1Type), arg2.toJson(arg2Type), arg3.toJson(arg3Type), arg4.toJson(arg4Type), arg5.toJson(arg5Type)),
+    )
+
+    fun <A : Any, S : Any, T : Any, U : Any, V : Any, W : Any, X : Any> stream(
+        itemType: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg3: U,
+        arg4: V,
+        arg5: W,
+        arg6: X,
+        arg1Type: KClass<S>,
+        arg2Type: KClass<T>,
+        arg3Type: KClass<U>,
+        arg4Type: KClass<V>,
+        arg5Type: KClass<W>,
+        arg6Type: KClass<X>,
+    ) = stream(
+        itemType,
+        method,
+        listOf(
+            arg1.toJson(arg1Type),
+            arg2.toJson(arg2Type),
+            arg3.toJson(arg3Type),
+            arg4.toJson(arg4Type),
+            arg5.toJson(arg5Type),
+            arg6.toJson(arg6Type),
+        ),
+    )
+
+    fun <A : Any, S : Any, T : Any, U : Any, V : Any, W : Any, X : Any, Y : Any> stream(
+        itemType: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg3: U,
+        arg4: V,
+        arg5: W,
+        arg6: X,
+        arg7: Y,
+        arg1Type: KClass<S>,
+        arg2Type: KClass<T>,
+        arg3Type: KClass<U>,
+        arg4Type: KClass<V>,
+        arg5Type: KClass<W>,
+        arg6Type: KClass<X>,
+        arg7Type: KClass<Y>,
+    ) = stream(
+        itemType,
+        method,
+        listOf(
+            arg1.toJson(arg1Type),
+            arg2.toJson(arg2Type),
+            arg3.toJson(arg3Type),
+            arg4.toJson(arg4Type),
+            arg5.toJson(arg5Type),
+            arg6.toJson(arg6Type),
+            arg7.toJson(arg7Type),
+        ),
+    )
+
+    fun <A : Any, S : Any, T : Any, U : Any, V : Any, W : Any, X : Any, Y : Any, Z : Any> stream(
+        itemType: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg3: U,
+        arg4: V,
+        arg5: W,
+        arg6: X,
+        arg7: Y,
+        arg8: Z,
+        arg1Type: KClass<S>,
+        arg2Type: KClass<T>,
+        arg3Type: KClass<U>,
+        arg4Type: KClass<V>,
+        arg5Type: KClass<W>,
+        arg6Type: KClass<X>,
+        arg7Type: KClass<Y>,
+        arg8Type: KClass<Z>,
+    ) = stream(
+        itemType,
+        method,
+        listOf(
+            arg1.toJson(arg1Type),
+            arg2.toJson(arg2Type),
+            arg3.toJson(arg3Type),
+            arg4.toJson(arg4Type),
+            arg5.toJson(arg5Type),
+            arg6.toJson(arg6Type),
+            arg7.toJson(arg7Type),
+            arg8.toJson(arg8Type),
+        ),
+    )
+
+    inline fun <A : Any, reified S : Any> stream(itemType: KClass<A>, method: String, arg: S) =
+        stream(itemType, method, arg, S::class)
+
+    inline fun <A : Any, reified S : Any, reified T : Any> stream(result: KClass<A>, method: String, arg1: S, arg2: T) =
+        stream(result, method, arg1, arg2, S::class, T::class)
+
+    inline fun <A : Any, reified S : Any, reified T : Any, reified U : Any> stream(
+        result: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg3: U
+    ) = stream(result, method, arg1, arg2, arg3, S::class, T::class, U::class)
+
+    inline fun <A : Any, reified S : Any, reified T : Any, reified U : Any, reified V : Any> stream(
+        result: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg3: U,
+        arg4: V,
+    ) = stream(result, method, arg1, arg2, arg3, arg4, S::class, T::class, U::class, V::class)
+
+    inline fun <A : Any, reified S : Any, reified T : Any, reified U : Any, reified V : Any, reified W : Any> stream(
+        result: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg3: U,
+        arg4: V,
+        arg5: W,
+    ) = stream(result, method, arg1, arg2, arg3, arg4, arg5, S::class, T::class, U::class, V::class, W::class)
+
+    inline fun <A : Any, reified S : Any, reified T : Any, reified U : Any, reified V : Any, reified W : Any, reified X : Any> stream(
+        result: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg3: U,
+        arg4: V,
+        arg5: W,
+        arg6: X,
+    ) = stream(result, method, arg1, arg2, arg3, arg4, arg5, arg6, S::class, T::class, U::class, V::class, W::class, X::class)
+
+    inline fun <A : Any, reified S : Any, reified T : Any, reified U : Any, reified V : Any, reified W : Any, reified X : Any, reified Y
+    : Any> stream(
+        result: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg3: U,
+        arg4: V,
+        arg5: W,
+        arg6: X,
+        arg7: Y,
+    ) = stream(
+        result,
+        method,
+        arg1,
+        arg2,
+        arg3,
+        arg4,
+        arg5,
+        arg6,
+        arg7,
+        S::class,
+        T::class,
+        U::class,
+        V::class,
+        W::class,
+        X::class,
+        Y::class,
+    )
+
+    inline fun <A : Any, reified S : Any, reified T : Any, reified U : Any, reified V : Any, reified W : Any, reified X : Any, reified Y
+    : Any, reified Z : Any> stream(
+        result: KClass<A>,
+        method: String,
+        arg1: S,
+        arg2: T,
+        arg3: U,
+        arg4: V,
+        arg5: W,
+        arg6: X,
+        arg7: Y,
+        arg8: Z,
+    ) = stream(
+        result,
+        method,
+        arg1,
+        arg2,
+        arg3,
+        arg4,
+        arg5,
+        arg6,
+        arg7,
+        arg8,
+        S::class,
+        T::class,
+        U::class,
+        V::class,
+        W::class,
+        X::class,
+        Y::class,
+        Z::class,
+    )
 }

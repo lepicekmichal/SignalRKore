@@ -20,34 +20,43 @@ sealed class HubMessage {
     abstract val type: Int
 
     @Serializable
-    sealed class Invocation(
-        @EncodeDefault override val type: Int = HubMessageType.INVOCATION.value,
-    ) : HubMessage() {
+    sealed class Invocation : HubMessage() {
 
         abstract val target: String
         abstract val arguments: List<JsonElement>
 
         @Serializable
-        data class Blocking(override val target: String, override val arguments: List<JsonElement>, val invocationId: String) : Invocation()
+        data class Blocking(override val target: String, override val arguments: List<JsonElement>, val invocationId: String) :
+            Invocation() {
+            @EncodeDefault
+            override val type: Int = HubMessageType.INVOCATION.value
+        }
 
         @Serializable
-        data class NonBlocking(override val target: String, override val arguments: List<JsonElement>) : Invocation()
+        data class NonBlocking(override val target: String, override val arguments: List<JsonElement>) : Invocation() {
+            @EncodeDefault
+            override val type: Int = HubMessageType.INVOCATION.value
+        }
 
         @Serializable
         data class Streaming(
             override val target: String,
             override val arguments: List<JsonElement>,
             val invocationId: String,
-            val streamIds: List<String>
-        ) : Invocation()
+            val streamIds: List<String>? = null
+        ) : Invocation() {
+            @EncodeDefault
+            override val type: Int = HubMessageType.STREAM_INVOCATION.value
+        }
     }
 
     @Serializable
-    sealed class Completion(
-        @EncodeDefault override val type: Int = HubMessageType.COMPLETION.value,
-    ) : HubMessage() {
+    sealed class Completion : HubMessage() {
 
         abstract val invocationId: String
+
+        @EncodeDefault
+        override val type: Int = HubMessageType.COMPLETION.value
 
         @Serializable
         data class Simple(override val invocationId: String) : Completion()
@@ -60,16 +69,36 @@ sealed class HubMessage {
     }
 
     @Serializable
-    data class Ping(
-        @EncodeDefault override val type: Int = HubMessageType.PING.value,
-    ) : HubMessage()
+    class Ping : HubMessage() {
+        @EncodeDefault
+        override val type: Int = HubMessageType.PING.value
+    }
 
     @Serializable
     data class Close(
         val allowReconnect: Boolean = false,
         val error: String? = null,
-        @EncodeDefault override val type: Int = HubMessageType.CLOSE.value,
-    ) : HubMessage()
+    ) : HubMessage() {
+        @EncodeDefault
+        override val type: Int = HubMessageType.CLOSE.value
+    }
+
+    @Serializable
+    data class StreamItem(
+        val invocationId: String,
+        val item: JsonElement,
+    ) : HubMessage() {
+        @EncodeDefault
+        override val type: Int = HubMessageType.STREAM_ITEM.value
+    }
+
+    @Serializable
+    data class CancelInvocation(
+        val invocationId: String,
+    ) : HubMessage() {
+        @EncodeDefault
+        override val type: Int = HubMessageType.CANCEL_INVOCATION.value
+    }
 
     object MessageSerializer : JsonContentPolymorphicSerializer<HubMessage>(HubMessage::class) {
         override fun selectDeserializer(element: JsonElement): DeserializationStrategy<out HubMessage> {
@@ -82,6 +111,8 @@ sealed class HubMessage {
                 }
                 HubMessageType.PING.value -> Ping.serializer()
                 HubMessageType.CLOSE.value -> Close.serializer()
+                HubMessageType.STREAM_ITEM.value -> StreamItem.serializer()
+                HubMessageType.CANCEL_INVOCATION.value -> CancelInvocation.serializer()
                 HubMessageType.COMPLETION.value -> when {
                     jsonObject["error"]?.jsonPrimitive?.isString != null -> Completion.Error.serializer()
                     jsonObject["result"] != null && jsonObject["result"] !is JsonNull -> Completion.Resulted.serializer()
