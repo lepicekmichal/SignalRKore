@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
@@ -281,7 +282,7 @@ class HubConnection private constructor(
         val serializedMessage: ByteArray = protocol.writeMessage(message)
         scope.launch {
             transport.send(serializedMessage)
-            logger.log("Sent invocation: $message")
+            logger.log("Sent hub data: $message")
             resetKeepAlive()
         }
     }
@@ -308,23 +309,48 @@ class HubConnection private constructor(
     @OptIn(InternalSerializationApi::class)
     override fun <T : Any> JsonElement.fromJson(kClass: KClass<T>): T = json.decodeFromJsonElement(kClass.serializer(), this)
 
-    override fun send(method: String, args: List<JsonElement>) {
+    override fun send(method: String, args: List<JsonElement>, uploadStreams: List<Flow<JsonElement>>) {
         connectedCheck("send")
 
-        val invocationMessage = HubMessage.Invocation.NonBlocking(target = method, arguments = args)
+        val streamIds = uploadStreams.map { UUID.randomUUID() }
+        val invocationMessage = HubMessage.Invocation.NonBlocking(
+            target = method,
+            arguments = args,
+            streamIds = streamIds.takeIf { it.isNotEmpty() }
+        )
         sendHubMessage(invocationMessage)
+        launchStreams(streamIds, uploadStreams)
     }
 
-    override suspend fun invoke(method: String, args: List<JsonElement>) = internalInvoke(
+    private fun launchStreams(streamIds: List<String>, uploadStreams: List<Flow<JsonElement>>) {
+        streamIds.zip(uploadStreams) { id, stream ->
+            scope.launch {
+                stream
+                    .map<_, HubMessage> { HubMessage.StreamItem(invocationId = id, item = it) }
+                    .onCompletion { throwable -> throwable?.let { throw it } ?: emit(HubMessage.Completion.Simple(invocationId = id)) }
+                    .catch { emit(HubMessage.Completion.Error(invocationId = id, error = it.message.orEmpty())) }
+                    .collect { sendHubMessage(it) }
+            }
+        }
+    }
+
+    override suspend fun invoke(method: String, args: List<JsonElement>, uploadStreams: List<Flow<JsonElement>>) = internalInvoke(
         method = method,
         args = args,
+        uploadStreams = uploadStreams,
         processSimple = { },
         processResult = { logger.log("Result of a completion message has been ignored: ${it.result}") },
     )
 
-    override suspend fun <T : Any> invoke(result: KClass<T>, method: String, args: List<JsonElement>): T = internalInvoke(
+    override suspend fun <T : Any> invoke(
+        result: KClass<T>,
+        method: String,
+        args: List<JsonElement>,
+        uploadStreams: List<Flow<JsonElement>>,
+    ): T = internalInvoke(
         method = method,
         args = args,
+        uploadStreams = uploadStreams,
         processSimple = { throw RuntimeException("The completion message has no result, but one is expected") },
         processResult = {
             try {
@@ -337,12 +363,23 @@ class HubConnection private constructor(
         },
     )
 
-    override fun <T : Any> stream(itemType: KClass<T>, method: String, args: List<JsonElement>): Flow<T> {
+    override fun <T : Any> stream(
+        itemType: KClass<T>,
+        method: String,
+        args: List<JsonElement>,
+        uploadStreams: List<Flow<JsonElement>>
+    ): Flow<T> {
         connectedCheck("stream")
 
         val invocationId = UUID.randomUUID()
 
-        val invocationMessage = HubMessage.Invocation.Streaming(target = method, arguments = args, invocationId = invocationId)
+        val streamIds = uploadStreams.map { UUID.randomUUID() }
+        val invocationMessage = HubMessage.Invocation.Streaming(
+            target = method,
+            arguments = args,
+            invocationId = invocationId,
+            streamIds = streamIds.takeIf { it.isNotEmpty() },
+        )
 
         return callbackFlow {
             var completionReceived = false
@@ -379,12 +416,16 @@ class HubConnection private constructor(
                     sendHubMessage(HubMessage.CancelInvocation(invocationId))
                 }
             }
-        }.onStart { sendHubMessage(invocationMessage) }
+        }.onStart {
+            sendHubMessage(invocationMessage)
+            launchStreams(streamIds, uploadStreams)
+        }
     }
 
     private suspend fun <T : Any> internalInvoke(
         method: String,
         args: List<JsonElement>,
+        uploadStreams: List<Flow<JsonElement>>,
         processSimple: (HubMessage.Completion.Simple) -> T,
         processResult: (HubMessage.Completion.Resulted) -> T,
     ): T {
@@ -392,8 +433,14 @@ class HubConnection private constructor(
 
         val invocationId = UUID.randomUUID()
 
-        val invocationMessage = HubMessage.Invocation.Blocking(target = method, arguments = args, invocationId = invocationId)
+        val streamIds = uploadStreams.map { UUID.randomUUID() }
+        val invocationMessage = HubMessage.Invocation.Blocking(
+            target = method,
+            arguments = args,
+            invocationId = invocationId,
+            streamIds = streamIds.takeIf { it.isNotEmpty() })
         sendHubMessage(invocationMessage)
+        launchStreams(streamIds, uploadStreams)
 
         return when (val completion = receivedCompletions.filter { it.invocationId == invocationId }.first()) {
             is HubMessage.Completion.Error -> throw RuntimeException(completion.error)

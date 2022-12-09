@@ -16,17 +16,16 @@ push content to clients and vice-versa. Instantly.
 | Network                         |                                         OkHttp only                                          |      Ktor (any engine pluggable*)      |
 | Async                           |                                            RxJava                                            |               Coroutines               |
 | Serialization                   |                                    Gson (uncustomizable)                                     | Kotlinx Serializable (custom instance) |
-| Streams                         |                                      :heavy_check_mark:                                      |      :heavy_multiplication_x: **       |
+| Streams                         |                                      :heavy_check_mark:                                      |           :heavy_check_mark:           |
 | Transport fallback              |                                   :heavy_multiplication_x:                                   |        :heavy_multiplication_x:        |
-| SSE                             |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark: ***         |
+| SSE                             |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark: **          |
 | Connection status               |                                   :heavy_multiplication_x:                                   |           :heavy_check_mark:           |
 | Logging                         |                                            SLF4J                                             |            Custom interface            |
 | MsgPack                         |                                      :heavy_check_mark:                                      |        :heavy_multiplication_x:        |
 | Tested through time / community |                                      :heavy_check_mark:                                      |        :heavy_multiplication_x:        |
 
-_* Except for SSE which uses only OkHttp at the moment_  
-_** Not yet, part of plan, see TODO_  
-_*** Only for android for now_
+_* Except for SSE which uses only OkHttp at the moment_   
+_** Only for android for now_
 
 > Even though this library has many advantages over official client library, SignalR Kore would not exist without it as implementation
 > of the SignalR standard is much inspired in it. Therefore I thank the authors from Microsoft.
@@ -98,6 +97,30 @@ connection.send("broadcastMessage", message)
 connection.on("broadcastMessage", Message::class) { message ->
     println(message.toString())
 }
+```
+
+## We got streams too
+
+```kotlin
+// Receiving
+connection.stream(
+    itemType = Int::class,
+    method = "Counter",
+    upTo = 10,
+    delay = 500,
+).collect {
+    println("Countdown: ${10 - it}")
+}
+
+// Uploading
+// send, invoke or stream methods
+connection.send("UploadStream", flow<Int> {
+    var data = 0
+    while (data < 10) {
+        emit(++data)
+        delay(500)
+    }
+})
 ```
 
 ## Keep up with connection status
@@ -188,7 +211,7 @@ If your kotlinx-serialization Json is customized or it has modules registered in
 - [x] Add logging
 - [ ] Error handling
 - [ ] Add tests
-- [ ] Implement streams
+- [x] Implement streams
 - [ ] Extend to JVM
 - [ ] Extend to iOS
 

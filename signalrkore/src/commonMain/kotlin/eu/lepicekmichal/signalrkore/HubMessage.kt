@@ -24,16 +24,26 @@ sealed class HubMessage {
 
         abstract val target: String
         abstract val arguments: List<JsonElement>
+        abstract val streamIds: List<String>?
 
         @Serializable
-        data class Blocking(override val target: String, override val arguments: List<JsonElement>, val invocationId: String) :
+        data class Blocking(
+            override val target: String,
+            override val arguments: List<JsonElement>,
+            val invocationId: String,
+            override val streamIds: List<String>? = null,
+        ) :
             Invocation() {
             @EncodeDefault
             override val type: Int = HubMessageType.INVOCATION.value
         }
 
         @Serializable
-        data class NonBlocking(override val target: String, override val arguments: List<JsonElement>) : Invocation() {
+        data class NonBlocking(
+            override val target: String,
+            override val arguments: List<JsonElement>,
+            override val streamIds: List<String>? = null
+        ) : Invocation() {
             @EncodeDefault
             override val type: Int = HubMessageType.INVOCATION.value
         }
@@ -43,7 +53,7 @@ sealed class HubMessage {
             override val target: String,
             override val arguments: List<JsonElement>,
             val invocationId: String,
-            val streamIds: List<String>? = null
+            override val streamIds: List<String>? = null
         ) : Invocation() {
             @EncodeDefault
             override val type: Int = HubMessageType.STREAM_INVOCATION.value
