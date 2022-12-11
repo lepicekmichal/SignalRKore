@@ -269,6 +269,8 @@ class HubConnection private constructor(
     suspend fun stop(errorMessage: String? = null) {
         if (connectionState.value == HubConnectionState.DISCONNECTED) return
 
+        _connectionState.value = HubConnectionState.DISCONNECTED
+
         logger.log("[$baseUrl] ${errorMessage ?: "Stopping connection"}")
 
         transport.stop()
