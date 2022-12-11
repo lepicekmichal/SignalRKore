@@ -4,28 +4,31 @@
 [![Kotlin](https://img.shields.io/badge/kotlin-1.7.20-blue.svg?logo=kotlin)](http://kotlinlang.org)
 [![GitHub License](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0)
 
-SignalR Kore is a client library connecting to ASP.NET Core server for real-time functionality brought to apps. Enables server-side code to
-push content to clients and vice-versa. Instantly.
+![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
+![badge-jvm](http://img.shields.io/badge/platform-jvm-DB413D.svg?style=flat)
+
+SignalR Kore is a client library connecting to ASP.NET Core server for real-time functionality. Enables server-side code to push content to
+clients and vice-versa. Instantly.
 
 ## Why should you use **this** library
 
-|                                 | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) |              SignalR Kore              |
-|:--------------------------------|:--------------------------------------------------------------------------------------------:|:--------------------------------------:|
-| Written in                      |                                             Java                                             |                 Kotlin                 |
-| KMM / KMP                       |                                   :heavy_multiplication_x:                                   |           Ready; on its way            |
-| Network                         |                                         OkHttp only                                          |      Ktor (any engine pluggable*)      |
-| Async                           |                                            RxJava                                            |               Coroutines               |
-| Serialization                   |                                    Gson (uncustomizable)                                     | Kotlinx Serializable (custom instance) |
-| Streams                         |                                      :heavy_check_mark:                                      |           :heavy_check_mark:           |
-| Transport fallback              |                                   :heavy_multiplication_x:                                   |        :heavy_multiplication_x:        |
-| SSE                             |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark: **          |
-| Connection status               |                                   :heavy_multiplication_x:                                   |           :heavy_check_mark:           |
-| Logging                         |                                            SLF4J                                             |            Custom interface            |
-| MsgPack                         |                                      :heavy_check_mark:                                      |        :heavy_multiplication_x:        |
-| Tested through time / community |                                      :heavy_check_mark:                                      |        :heavy_multiplication_x:        |
+|                            | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) |            SignalR Kore             |
+|:---------------------------|:--------------------------------------------------------------------------------------------:|:-----------------------------------:|
+| Written in                 |                                             Java                                             |               Kotlin                |
+| KMM / KMP                  |                                   :heavy_multiplication_x:                                   |            Android, JVM             |
+| Network                    |                                         OkHttp only                                          |    Ktor (any engine pluggable*)     |
+| Async                      |                                            RxJava                                            |             Coroutines              |
+| Serialization              |                                   Gson (non-customizable)                                    | Kotlinx Serializable (customizable) |
+| Streams                    |                                      :heavy_check_mark:                                      |         :heavy_check_mark:          |
+| Transport fallback         |                                   :heavy_multiplication_x:                                   |      :heavy_multiplication_x:       |
+| SSE                        |                                   :heavy_multiplication_x:                                   |        :heavy_check_mark: **        |
+| Connection status          |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
+| Logging                    |                                            SLF4J                                             |          Custom interface           |
+| MsgPack                    |                                      :heavy_check_mark:                                      |      :heavy_multiplication_x:       |
+| Tested by time & community |                                      :heavy_check_mark:                                      |      :heavy_multiplication_x:       |
 
 _* Except for SSE which uses only OkHttp at the moment_   
-_** Only for android for now_
+_** Only for android and jvm for now_
 
 > Even though this library has many advantages over official client library, SignalR Kore would not exist without it as implementation
 > of the SignalR standard is much inspired in it. Therefore I thank the authors from Microsoft.
@@ -106,8 +109,8 @@ connection.on("broadcastMessage", Message::class) { message ->
 connection.stream(
     itemType = Int::class,
     method = "Counter",
-    upTo = 10,
-    delay = 500,
+    arg1 = 10, // up to
+    arg2 = 500, // delay
 ).collect {
     println("Countdown: ${10 - it}")
 }
@@ -157,7 +160,7 @@ HubConnectionBuilder
 
 1. TransportEnum.All _(default, automatic choice based on availability)_
 2. TransportEnum.WebSockets
-3. TransportEnum.ServerSentEvents _(only for android, only okhttp engine)_
+3. TransportEnum.ServerSentEvents _(only for android and jvm, only okhttp engine)_
 4. TransportEnum.LongPolling
 
 ### Add your own ktor http client
@@ -212,7 +215,7 @@ If your kotlinx-serialization Json is customized or it has modules registered in
 - [ ] Error handling
 - [ ] Add tests
 - [x] Implement streams
-- [ ] Extend to JVM
+- [x] Extend to JVM
 - [ ] Extend to iOS
 
 > Special thanks goes to [AzureSignalR ChatRoomLocal sample](https://github.com/aspnet/AzureSignalR-samples/tree/main/samples/ChatRoomLocal)
