@@ -14,7 +14,18 @@ kotlin {
     }
 
     targets {
-        android()
+        android {
+            compilations.all {
+                kotlinOptions {
+                    jvmTarget = JavaVersion.VERSION_1_8.toString()
+                }
+            }
+        }
+        jvm {
+            compilations.all {
+                kotlinOptions.jvmTarget = JavaVersion.VERSION_1_8.toString()
+            }
+        }
     }
 
     sourceSets {
@@ -41,13 +52,14 @@ kotlin {
                 implementation(kotlin("test"))
             }
         }
-        val androidMain by getting {
-            kotlin.srcDir("src/commonMain/kotlin")
-
+        val jvmMain by getting {
             dependencies {
                 implementation("com.squareup.okhttp3:okhttp:4.10.0")
                 implementation("io.ktor:ktor-client-okhttp:2.1.3")
             }
+        }
+        val androidMain by getting {
+            dependsOn(jvmMain)
         }
         val androidTest by getting
     }
@@ -60,6 +72,11 @@ android {
     defaultConfig {
         minSdk = 21
         targetSdk = 33
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     namespace = "eu.lepicekmichal.signalrkore"
