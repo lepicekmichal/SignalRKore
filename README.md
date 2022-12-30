@@ -21,6 +21,7 @@ clients and vice-versa. Instantly.
 | Serialization              |                                   Gson (non-customizable)                                    | Kotlinx Serializable (customizable) |
 | Streams                    |                                      :heavy_check_mark:                                      |         :heavy_check_mark:          |
 | Transport fallback         |                                   :heavy_multiplication_x:                                   |      :heavy_multiplication_x:       |
+| Automatic reconnect        |                                   :heavy_multiplication_x:                                   |      :heavy_multiplication_x:       |
 | SSE                        |                                   :heavy_multiplication_x:                                   |        :heavy_check_mark: **        |
 | Connection status          |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
 | Logging                    |                                            SLF4J                                             |          Custom interface           |
@@ -217,6 +218,8 @@ If your kotlinx-serialization Json is customized or it has modules registered in
 - [x] Implement streams
 - [x] Extend to JVM
 - [ ] Extend to iOS
+- [ ] Implement transport fallback
+- [ ] Implement automatic reconnect
 
 > Special thanks goes to [AzureSignalR ChatRoomLocal sample](https://github.com/aspnet/AzureSignalR-samples/tree/main/samples/ChatRoomLocal)
 > without which I would never start to write this library client.
