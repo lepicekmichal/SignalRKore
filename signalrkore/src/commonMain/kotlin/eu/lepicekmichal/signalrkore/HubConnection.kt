@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import kotlinx.datetime.DateTimePeriod
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
@@ -48,6 +49,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.serializer
 import kotlin.reflect.KClass
+import kotlin.system.measureNanoTime
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -61,6 +63,7 @@ class HubConnection private constructor(
     private val handshakeResponseTimeout: Duration,
     private val headers: Map<String, String>,
     private val skipNegotiate: Boolean,
+    private val automaticReconnect: AutomaticReconnect,
     private val json: Json,
     override val logger: Logger,
 ) : HubCommunication() {
@@ -102,6 +105,7 @@ class HubConnection private constructor(
     internal constructor(
         url: String,
         skipNegotiate: Boolean,
+        automaticReconnect: AutomaticReconnect,
         httpClient: HttpClient?,
         protocol: HubProtocol,
         handshakeResponseTimeout: Duration,
@@ -121,14 +125,17 @@ class HubConnection private constructor(
         handshakeResponseTimeout = if (handshakeResponseTimeout.isPositive()) handshakeResponseTimeout else 15.seconds,
         headers = headers,
         skipNegotiate = skipNegotiate,
+        automaticReconnect = automaticReconnect,
         json = json,
         logger = logger,
     )
 
     suspend fun start() {
-        if (connectionState.value != HubConnectionState.DISCONNECTED) return
+        if (connectionState.value != HubConnectionState.DISCONNECTED && connectionState.value != HubConnectionState.RECONNECTING) return
 
-        _connectionState.value = HubConnectionState.CONNECTING
+        if (connectionState.value == HubConnectionState.DISCONNECTED) {
+            _connectionState.value = HubConnectionState.CONNECTING
+        }
 
         if (skipNegotiate && transportEnum != TransportEnum.WebSockets)
             throw RuntimeException("Negotiation can only be skipped when using the WebSocket transport")
@@ -147,7 +154,9 @@ class HubConnection private constructor(
 
         transport.start(negotiationUrl)
 
-        if (connectionState.value != HubConnectionState.CONNECTING) throw RuntimeException("Connection closed while trying to connect.")
+        if (connectionState.value != HubConnectionState.CONNECTING && connectionState.value != HubConnectionState.RECONNECTING) {
+            throw RuntimeException("Connection closed while trying to connect.")
+        }
 
         scope.launch {
             val handshake = Json.encodeToString(Handshake(protocol = protocol.name, version = protocol.version)) + RECORD_SEPARATOR
@@ -185,7 +194,7 @@ class HubConnection private constructor(
         negotiateAttempts: Int,
         headers: Map<String, String>
     ): Negotiation {
-        if (connectionState.value !== HubConnectionState.CONNECTING)
+        if (connectionState.value != HubConnectionState.CONNECTING && connectionState.value != HubConnectionState.RECONNECTING)
             throw RuntimeException("HubConnection trying to negotiate when not in the CONNECTING state.")
 
         val response = handleNegotiate(
@@ -266,6 +275,45 @@ class HubConnection private constructor(
         }
     }
 
+    private suspend fun reconnect(errorMessage: String? = null) {
+        stop(errorMessage)
+
+        if (automaticReconnect !is AutomaticReconnect.Custom) return
+
+        _connectionState.value = HubConnectionState.RECONNECTING
+
+        scope.launch {
+            val startTime = System.nanoTime()
+            var retryCount = 0
+
+            while (true) {
+                val delayTime = automaticReconnect.invoke(
+                    previousRetryCount = retryCount++,
+                    elapsedTime = DateTimePeriod(nanoseconds = System.nanoTime() - startTime),
+                )
+
+                delay(timeMillis = delayTime ?: break)
+
+                try {
+                    logger.log("[$baseUrl] Reconnecting - #${retryCount} attempt")
+                    start()
+                } catch (ex: Exception) {
+                    logger.log("[$baseUrl] Reconnecting error: $ex")
+                    continue
+                }
+                break
+            }
+
+            if (_connectionState.value != HubConnectionState.CONNECTED) {
+                logger.log("[$baseUrl] Reconnection unsuccessful, terminating")
+
+                _connectionState.value = HubConnectionState.DISCONNECTED
+
+                job.cancelChildren()
+            }
+        }
+    }
+
     suspend fun stop(errorMessage: String? = null) {
         if (connectionState.value == HubConnectionState.DISCONNECTED) return
 
@@ -295,7 +343,9 @@ class HubConnection private constructor(
 
         messages.forEach { message ->
             when (message) {
-                is HubMessage.Close -> stop(message.error)
+                is HubMessage.Close ->
+                    if (message.allowReconnect && automaticReconnect !is AutomaticReconnect.Inactive) reconnect(message.error)
+                    else stop(message.error)
                 is HubMessage.Invocation -> receivedInvocations.emit(message)
                 is HubMessage.Ping -> Unit
                 is HubMessage.CancelInvocation -> Unit // this should not happen according to standard

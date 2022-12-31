@@ -21,7 +21,7 @@ clients and vice-versa. Instantly.
 | Serialization              |                                   Gson (non-customizable)                                    | Kotlinx Serializable (customizable) |
 | Streams                    |                                      :heavy_check_mark:                                      |         :heavy_check_mark:          |
 | Transport fallback         |                                   :heavy_multiplication_x:                                   |      :heavy_multiplication_x:       |
-| Automatic reconnect        |                                   :heavy_multiplication_x:                                   |      :heavy_multiplication_x:       |
+| Automatic reconnect        |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
 | SSE                        |                                   :heavy_multiplication_x:                                   |        :heavy_check_mark: **        |
 | Connection status          |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
 | Logging                    |                                            SLF4J                                             |          Custom interface           |
@@ -206,6 +206,44 @@ logger = Logger {
 
 If your kotlinx-serialization Json is customized or it has modules registered in it, then don't forget to pass it.
 
+### Reconnect if server wants you to
+
+SignalR Core server can send close message with allowReconnect property set to true.   
+Automatic reconnect is not default behaviour, but can be simply set up.
+
+```kotlin
+
+import kotlin.random.Random
+
+/** Default, reconnect turned off **/
+automaticReconnect = AutomaticReconnect.Inactive
+
+/**
+ * Basic reconnect policy
+ * waits 0、2、10 and 30 seconds before each attempt to reconnect
+ * If all four attempts are unsucessful, reconnect is aborted
+ */
+automaticReconnect = AutomaticReconnect.Active
+
+/**
+ * Extra reconnect policy
+ * Each attempt to reconnect is suspended with delay of exponential backoff time
+ * In default settings
+ *      initially waits 1 second, then 1.5 times more seconds each time and at most 15 tries with highest delay of 60 seconds
+ *      all can be adjusted
+ */
+automaticReconnect = AutomaticReconnect.exponentialBackoff()
+
+/**
+ * Custom reconnect policy
+ * You can implement anything you find plausible
+ */
+automaticReconnect = AutomaticReconnect.Custom { previousRetryCount, elapsedTime ->
+    // before each attempt wait random time but at most 60 seconds
+    delay(Random.nextLong(60_000))
+}
+```
+
 ## TODO list
 
 - [x] Readme
@@ -219,7 +257,7 @@ If your kotlinx-serialization Json is customized or it has modules registered in
 - [x] Extend to JVM
 - [ ] Extend to iOS
 - [ ] Implement transport fallback
-- [ ] Implement automatic reconnect
+- [x] Implement automatic reconnect
 
 > Special thanks goes to [AzureSignalR ChatRoomLocal sample](https://github.com/aspnet/AzureSignalR-samples/tree/main/samples/ChatRoomLocal)
 > without which I would never start to write this library client.

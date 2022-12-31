@@ -6,6 +6,9 @@ import kotlin.time.Duration
 
 class HttpHubConnectionBuilder(private val url: String) {
 
+    /**
+     * The transport type to be used by the [eu.lepicekmichal.signalrkore.HubConnection]
+     */
     var transportEnum: TransportEnum = TransportEnum.All
 
     /**
@@ -33,7 +36,7 @@ class HttpHubConnectionBuilder(private val url: String) {
         }
 
     /**
-     *The duration that the [eu.lepicekmichal.signalrkore.HubConnection] should wait for a Handshake Response from the server
+     * The duration that the [eu.lepicekmichal.signalrkore.HubConnection] should wait for a Handshake Response from the server
      */
     var handshakeResponseTimeout: Duration = Duration.ZERO
 
@@ -53,11 +56,17 @@ class HttpHubConnectionBuilder(private val url: String) {
     var logger: Logger = Logger { }
 
     /**
+     * Defines whether and how to automatically reconnect on close
+     */
+    var automaticReconnect: AutomaticReconnect = AutomaticReconnect.Inactive
+
+    /**
      * @return A new instance of [eu.lepicekmichal.signalrkore.HubConnection].
      */
     fun build(): HubConnection = HubConnection(
         url,
         skipNegotiate,
+        automaticReconnect,
         httpClient,
         if (::protocol.isInitialized) protocol else JsonHubProtocol(logger),
         handshakeResponseTimeout,
