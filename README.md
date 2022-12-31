@@ -132,10 +132,10 @@ connection.send("UploadStream", flow<Int> {
 ```kotlin
 connection.connectionState.collect {
     when (it) {
-        is CONNECTED -> println("Yay, we online")
-        is DISCONNECTED -> println("Shut off!")
-        is CONNECTING -> println("Almost there")
-        is RECONNECTING -> println("Down again")
+        HubConnectionState.CONNECTED -> println("Yay, we online")
+        HubConnectionState.DISCONNECTED -> println("Shut off!")
+        HubConnectionState.CONNECTING -> println("Almost there")
+        HubConnectionState.RECONNECTING -> println("Down again")
     }
 } 
 ```
