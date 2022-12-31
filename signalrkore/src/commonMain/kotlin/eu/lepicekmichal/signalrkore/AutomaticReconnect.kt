@@ -1,13 +1,13 @@
 package eu.lepicekmichal.signalrkore
 
 import eu.lepicekmichal.signalrkore.AutomaticReconnect.Custom
-import kotlinx.datetime.DateTimePeriod
 import kotlin.math.pow
+import kotlin.time.Duration
 
 sealed interface AutomaticReconnect {
     object Inactive : AutomaticReconnect
     fun interface Custom : AutomaticReconnect {
-        suspend fun invoke(previousRetryCount: Int, elapsedTime: DateTimePeriod): Long?
+        suspend fun invoke(previousRetryCount: Int, elapsedTime: Duration): Long?
     }
 
     companion object {

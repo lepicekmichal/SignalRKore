@@ -229,7 +229,8 @@ automaticReconnect = AutomaticReconnect.Active
  * Extra reconnect policy
  * Each attempt to reconnect is suspended with delay of exponential backoff time
  * In default settings
- *      initially waits 1 second, then 1.5 times more seconds each time and at most 15 tries with highest delay of 60 seconds
+ *      initially waits 1 second, then 1.5 times more seconds each time
+ *      at most 15 tries with highest delay of 60 seconds
  *      all can be adjusted
  */
 automaticReconnect = AutomaticReconnect.exponentialBackoff()
@@ -239,8 +240,9 @@ automaticReconnect = AutomaticReconnect.exponentialBackoff()
  * You can implement anything you find plausible
  */
 automaticReconnect = AutomaticReconnect.Custom { previousRetryCount, elapsedTime ->
-    // before each attempt wait random time but at most 60 seconds
-    delay(Random.nextLong(60_000))
+    // before each attempt wait random time 
+    // but at most only the time that we are already trying to reconnect
+    delay(Random.nextLong(elapsedTime.inWholeMilliseconds))
 }
 ```
 

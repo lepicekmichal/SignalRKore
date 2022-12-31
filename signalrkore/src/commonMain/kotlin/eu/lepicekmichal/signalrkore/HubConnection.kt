@@ -49,10 +49,12 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.serializer
 import kotlin.reflect.KClass
-import kotlin.system.measureNanoTime
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
+import kotlin.time.TimeSource
+import kotlin.time.measureTime
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HubConnection private constructor(
@@ -275,6 +277,7 @@ class HubConnection private constructor(
         }
     }
 
+    @OptIn(ExperimentalTime::class)
     private suspend fun reconnect(errorMessage: String? = null) {
         stop(errorMessage)
 
@@ -283,13 +286,13 @@ class HubConnection private constructor(
         _connectionState.value = HubConnectionState.RECONNECTING
 
         scope.launch {
-            val startTime = System.nanoTime()
+            val mark = TimeSource.Monotonic.markNow()
             var retryCount = 0
 
             while (true) {
                 val delayTime = automaticReconnect.invoke(
                     previousRetryCount = retryCount++,
-                    elapsedTime = DateTimePeriod(nanoseconds = System.nanoTime() - startTime),
+                    elapsedTime = mark.elapsedNow(),
                 )
 
                 delay(timeMillis = delayTime ?: break)
