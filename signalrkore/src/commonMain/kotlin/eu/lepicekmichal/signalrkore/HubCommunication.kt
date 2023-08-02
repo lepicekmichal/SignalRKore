@@ -15591,7 +15591,7 @@ abstract class HubCommunication {
     private fun on(target: String): Flow<HubMessage.Invocation> =
         receivedInvocations
             .filter { it.target == target }
-            .onEach { logger.log("Received invocation: $it") }
+            .onEach { logger.log(Logger.Level.INFO, "Received invocation: $it") }
 
     fun <T1> on(target: String, param1: KClass<T1>): Flow<T1> where T1 : Any =
         on(target)

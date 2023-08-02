@@ -1,6 +1,6 @@
 package eu.lepicekmichal.signalrkore
 
-import io.ktor.client.*
+import io.ktor.client.HttpClient
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration
 
@@ -53,7 +53,7 @@ class HttpHubConnectionBuilder(private val url: String) {
     /**
      * Json instance for (de)serializing custom models coming through as payloads
      */
-    var logger: Logger = Logger { }
+    var logger: Logger = Logger { _, _ -> }
 
     /**
      * Defines whether and how to automatically reconnect on close

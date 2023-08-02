@@ -9,24 +9,26 @@ group = requireNotNull(project.findProperty("GROUP"))
 version = requireNotNull(project.findProperty("VERSION_NAME"))
 
 kotlin {
-    android {
+    androidTarget {
         publishLibraryVariants("release")
     }
 
     targets {
-        android {
+        androidTarget {
             compilations.all {
                 kotlinOptions {
-                    jvmTarget = JavaVersion.VERSION_1_8.toString()
+                    jvmTarget = JavaVersion.VERSION_17.toString()
                 }
             }
         }
         jvm {
             compilations.all {
-                kotlinOptions.jvmTarget = JavaVersion.VERSION_1_8.toString()
+                kotlinOptions.jvmTarget = JavaVersion.VERSION_17.toString()
             }
         }
     }
+
+    jvmToolchain(17)
 
     sourceSets {
         all {
@@ -37,12 +39,12 @@ kotlin {
 
         val commonMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlin:kotlin-stdlib-common:1.8.10")
-                implementation("io.ktor:ktor-client-core:2.2.4")
+                implementation("org.jetbrains.kotlin:kotlin-stdlib-common:1.9.0")
+                implementation("io.ktor:ktor-client-core:2.3.2")
                 implementation("io.ktor:ktor-client-websockets:2.2.4")
-                implementation("io.ktor:ktor-client-content-negotiation:2.2.4")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:2.2.4")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
+                implementation("io.ktor:ktor-client-content-negotiation:2.3.2")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.2")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
                 implementation("com.squareup.okio:okio:3.3.0")
             }
@@ -54,14 +56,14 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation("com.squareup.okhttp3:okhttp:4.10.0")
-                implementation("io.ktor:ktor-client-okhttp:2.2.4")
+                implementation("com.squareup.okhttp3:okhttp:4.11.0")
+                implementation("io.ktor:ktor-client-okhttp:2.3.2")
             }
         }
         val androidMain by getting {
             dependsOn(jvmMain)
         }
-        val androidTest by getting
+        val androidUnitTest by getting
     }
 }
 
@@ -75,8 +77,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     namespace = "eu.lepicekmichal.signalrkore"

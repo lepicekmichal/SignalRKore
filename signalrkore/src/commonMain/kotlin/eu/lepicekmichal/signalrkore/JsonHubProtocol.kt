@@ -1,8 +1,8 @@
 package eu.lepicekmichal.signalrkore
 
-import io.ktor.utils.io.core.*
-import io.ktor.utils.io.errors.*
-import kotlinx.serialization.decodeFromString
+import io.ktor.utils.io.core.String
+import io.ktor.utils.io.core.toByteArray
+import io.ktor.utils.io.errors.IOException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -23,7 +23,7 @@ class JsonHubProtocol(private val logger: Logger) : HubProtocol {
             .filter { it.isNotEmpty() }
             .map { str ->
                 try {
-                    logger.log("Decoding message: $str")
+                    logger.log(Logger.Level.INFO, "Decoding message: $str")
                     json.decodeFromString(str)
                 } catch (ex: IOException) {
                     throw RuntimeException("Error reading JSON.", ex)
@@ -32,7 +32,7 @@ class JsonHubProtocol(private val logger: Logger) : HubProtocol {
     }
 
     override fun writeMessage(message: HubMessage): ByteArray =
-        (json.encodeToString(message).also { logger.log("Encoded message: $it") } + RECORD_SEPARATOR).toByteArray()
+        (json.encodeToString(message).also { logger.log(Logger.Level.INFO, "Encoded message: $it") } + RECORD_SEPARATOR).toByteArray()
 
     companion object {
         private const val PROTOCOL_NAME = "json"

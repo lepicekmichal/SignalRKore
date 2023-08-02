@@ -40,10 +40,8 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlinx.datetime.DateTimePeriod
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -54,7 +52,6 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 import kotlin.time.TimeSource
-import kotlin.time.measureTime
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HubConnection private constructor(
@@ -172,12 +169,18 @@ class HubConnection private constructor(
         if (negotiationTransport != TransportEnum.LongPolling) {
             scope.launch {
                 pingTicker
-                    .catch { stop(it.message) }
+                    .catch {
+                        if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(it.message)
+                        else stop(it.message)
+                    }
                     .collect { sendHubMessage(message = HubMessage.Ping()) }
             }
             scope.launch {
                 serverTimeoutTicker
-                    .catch { stop(it.message) }
+                    .catch {
+                        if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(it.message)
+                        else stop(it.message)
+                    }
                     .collect()
             }
         }
@@ -186,7 +189,10 @@ class HubConnection private constructor(
 
         scope.launch {
             transport.receive()
-                .catch { it.printStack() }
+                .catch {
+                    if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(it.message)
+                    else stop(it.message)
+                }
                 .collect { processReceived(it) }
         }
     }
@@ -213,6 +219,7 @@ class HubConnection private constructor(
                     key to (if (key == "Authorization") "Bearer " + response.accessToken else value)
                 }.toMap())
             }
+
             is NegotiateResponse.Success -> {
                 fun NegotiateResponse.Success.selectTransport(vararg accessibleTransports: TransportEnum): TransportEnum? {
                     val candidates = accessibleTransports.intersect(availableTransports.transports.toSet())
@@ -225,6 +232,7 @@ class HubConnection private constructor(
                         TransportEnum.ServerSentEvents,
                         TransportEnum.LongPolling
                     )
+
                     else -> response.selectTransport(transportEnum)
                 } ?: throw RuntimeException("There were no compatible transports on the server.")
 
@@ -298,17 +306,17 @@ class HubConnection private constructor(
                 delay(timeMillis = delayTime ?: break)
 
                 try {
-                    logger.log("[$baseUrl] Reconnecting - #${retryCount} attempt")
+                    logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting - #${retryCount} attempt")
                     start()
                 } catch (ex: Exception) {
-                    logger.log("[$baseUrl] Reconnecting error: $ex")
+                    logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting error: $ex")
                     continue
                 }
                 break
             }
 
             if (_connectionState.value != HubConnectionState.CONNECTED) {
-                logger.log("[$baseUrl] Reconnection unsuccessful, terminating")
+                logger.log(Logger.Level.INFO, "[$baseUrl] Reconnection unsuccessful, terminating")
 
                 _connectionState.value = HubConnectionState.DISCONNECTED
 
@@ -322,20 +330,22 @@ class HubConnection private constructor(
 
         _connectionState.value = HubConnectionState.DISCONNECTED
 
-        logger.log("[$baseUrl] ${errorMessage ?: "Stopping connection"}")
+        logger.log(Logger.Level.INFO, "[$baseUrl] ${errorMessage ?: "Stopping connection"}")
 
         transport.stop()
         job.cancelChildren()
     }
 
     private fun sendHubMessage(message: HubMessage) {
-        if (connectionState.value != HubConnectionState.CONNECTED)
-            throw RuntimeException("Trying to send and message while the connection is not active.")
+        if (connectionState.value != HubConnectionState.CONNECTED) {
+            logger.log(Logger.Level.ERROR, "Trying to send and message while the connection is not active. ($message)")
+            return
+        }
 
         val serializedMessage: ByteArray = protocol.writeMessage(message)
         scope.launch {
             transport.send(serializedMessage)
-            logger.log("Sent hub data: $message")
+            logger.log(Logger.Level.INFO, "Sent hub data: $message")
             resetKeepAlive()
         }
     }
@@ -348,7 +358,10 @@ class HubConnection private constructor(
             when (message) {
                 is HubMessage.Close ->
                     if (message.allowReconnect && automaticReconnect !is AutomaticReconnect.Inactive) reconnect(message.error)
-                    else stop(message.error)
+                    else
+                        if (message.allowReconnect && automaticReconnect !is AutomaticReconnect.Inactive) reconnect(message.error)
+                        else stop(message.error)
+
                 is HubMessage.Invocation -> receivedInvocations.emit(message)
                 is HubMessage.Ping -> Unit
                 is HubMessage.CancelInvocation -> Unit // this should not happen according to standard
@@ -394,7 +407,7 @@ class HubConnection private constructor(
         args = args,
         uploadStreams = uploadStreams,
         processSimple = { },
-        processResult = { logger.log("Result of a completion message has been ignored: ${it.result}") },
+        processResult = { logger.log(Logger.Level.INFO, "Result of a completion message has been ignored: ${it.result}") },
     )
 
     override suspend fun <T : Any> invoke(
