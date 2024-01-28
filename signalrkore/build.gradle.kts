@@ -39,14 +39,14 @@ kotlin {
 
         val commonMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlin:kotlin-stdlib-common:1.9.0")
-                implementation("io.ktor:ktor-client-core:2.3.3")
+                implementation("org.jetbrains.kotlin:kotlin-stdlib-common:1.9.21")
+                implementation("io.ktor:ktor-client-core:2.3.6")
                 implementation("io.ktor:ktor-client-websockets:2.3.3")
-                implementation("io.ktor:ktor-client-content-negotiation:2.3.3")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.3")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
-                implementation("com.squareup.okio:okio:3.5.0")
+                implementation("io.ktor:ktor-client-content-negotiation:2.3.6")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.6")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation("com.squareup.okio:okio:3.6.0")
             }
         }
         val commonTest by getting {
@@ -56,7 +56,7 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation("com.squareup.okhttp3:okhttp:4.11.0")
+                implementation("com.squareup.okhttp3:okhttp:4.12.0")
                 implementation("io.ktor:ktor-client-okhttp:2.3.3")
             }
         }

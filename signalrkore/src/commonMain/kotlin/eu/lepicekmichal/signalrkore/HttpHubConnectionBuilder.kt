@@ -3,6 +3,7 @@ package eu.lepicekmichal.signalrkore
 import io.ktor.client.HttpClient
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 class HttpHubConnectionBuilder(private val url: String) {
 
@@ -38,7 +39,7 @@ class HttpHubConnectionBuilder(private val url: String) {
     /**
      * The duration that the [eu.lepicekmichal.signalrkore.HubConnection] should wait for a Handshake Response from the server
      */
-    var handshakeResponseTimeout: Duration = Duration.ZERO
+    var handshakeResponseTimeout: Duration = 10.seconds
 
     /**
      * A Map representing the collection of Headers that the [eu.lepicekmichal.signalrkore.HubConnection] should send.

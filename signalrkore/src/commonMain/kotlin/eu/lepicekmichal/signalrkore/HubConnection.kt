@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
@@ -157,9 +158,13 @@ class HubConnection private constructor(
             throw RuntimeException("Connection closed while trying to connect.")
         }
 
-        scope.launch {
-            val handshake = Json.encodeToString(Handshake(protocol = protocol.name, version = protocol.version)) + RECORD_SEPARATOR
-            transport.send(handshake.toByteArray())
+        withContext(dispatchers.io) {
+            launch {
+                val handshake = Json.encodeToString(Handshake(protocol = protocol.name, version = protocol.version)) + RECORD_SEPARATOR
+                transport.send(handshake.toByteArray())
+            }.invokeOnCompletion {
+                if (it != null) _connectionState.value = HubConnectionState.DISCONNECTED
+            }
         }
 
         handleHandshake(transport)
@@ -293,34 +298,38 @@ class HubConnection private constructor(
 
         _connectionState.value = HubConnectionState.RECONNECTING
 
-        scope.launch {
-            val mark = TimeSource.Monotonic.markNow()
-            var retryCount = 0
+        withContext(dispatchers.io) {
+            launch {
+                val mark = TimeSource.Monotonic.markNow()
+                var retryCount = 0
 
-            while (true) {
-                val delayTime = automaticReconnect.invoke(
-                    previousRetryCount = retryCount++,
-                    elapsedTime = mark.elapsedNow(),
-                )
+                while (true) {
+                    val delayTime = automaticReconnect.invoke(
+                        previousRetryCount = retryCount++,
+                        elapsedTime = mark.elapsedNow(),
+                    )
 
-                delay(timeMillis = delayTime ?: break)
+                    delay(timeMillis = delayTime ?: break)
 
-                try {
-                    logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting - #${retryCount} attempt")
-                    start()
-                } catch (ex: Exception) {
-                    logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting error: $ex")
-                    continue
+                    try {
+                        logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting - #${retryCount} attempt")
+                        start()
+                    } catch (ex: Exception) {
+                        logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting error: $ex")
+                        continue
+                    }
+                    break
                 }
-                break
-            }
 
-            if (_connectionState.value != HubConnectionState.CONNECTED) {
-                logger.log(Logger.Level.INFO, "[$baseUrl] Reconnection unsuccessful, terminating")
+                if (_connectionState.value != HubConnectionState.CONNECTED) {
+                    logger.log(Logger.Level.INFO, "[$baseUrl] Reconnection unsuccessful, terminating")
 
-                _connectionState.value = HubConnectionState.DISCONNECTED
+                    _connectionState.value = HubConnectionState.DISCONNECTED
 
-                job.cancelChildren()
+                    job.cancelChildren()
+                }
+            }.invokeOnCompletion {
+                if (it != null) _connectionState.value = HubConnectionState.DISCONNECTED
             }
         }
     }
