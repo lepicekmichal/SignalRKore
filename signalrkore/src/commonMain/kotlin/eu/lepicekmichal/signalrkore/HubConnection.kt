@@ -298,39 +298,37 @@ class HubConnection private constructor(
 
         _connectionState.value = HubConnectionState.RECONNECTING
 
-        withContext(dispatchers.io) {
-            launch {
-                val mark = TimeSource.Monotonic.markNow()
-                var retryCount = 0
+        scope.launch(dispatchers.io) {
+            val mark = TimeSource.Monotonic.markNow()
+            var retryCount = 0
 
-                while (true) {
-                    val delayTime = automaticReconnect.invoke(
-                        previousRetryCount = retryCount++,
-                        elapsedTime = mark.elapsedNow(),
-                    )
+            while (true) {
+                val delayTime = automaticReconnect.invoke(
+                    previousRetryCount = retryCount++,
+                    elapsedTime = mark.elapsedNow(),
+                )
 
-                    delay(timeMillis = delayTime ?: break)
+                delay(timeMillis = delayTime ?: break)
 
-                    try {
-                        logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting - #${retryCount} attempt")
-                        start()
-                    } catch (ex: Exception) {
-                        logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting error: $ex")
-                        continue
-                    }
-                    break
+                try {
+                    logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting - #${retryCount} attempt")
+                    start()
+                } catch (ex: Exception) {
+                    logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting error: $ex")
+                    continue
                 }
-
-                if (_connectionState.value != HubConnectionState.CONNECTED) {
-                    logger.log(Logger.Level.INFO, "[$baseUrl] Reconnection unsuccessful, terminating")
-
-                    _connectionState.value = HubConnectionState.DISCONNECTED
-
-                    job.cancelChildren()
-                }
-            }.invokeOnCompletion {
-                if (it != null) _connectionState.value = HubConnectionState.DISCONNECTED
+                break
             }
+
+            if (_connectionState.value != HubConnectionState.CONNECTED) {
+                logger.log(Logger.Level.INFO, "[$baseUrl] Reconnection unsuccessful, terminating")
+
+                _connectionState.value = HubConnectionState.DISCONNECTED
+
+                job.cancelChildren()
+            }
+        }.invokeOnCompletion {
+            if (it != null) _connectionState.value = HubConnectionState.DISCONNECTED
         }
     }
 
