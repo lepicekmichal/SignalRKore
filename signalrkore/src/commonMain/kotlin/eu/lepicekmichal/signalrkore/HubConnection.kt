@@ -3,7 +3,6 @@ package eu.lepicekmichal.signalrkore
 import eu.lepicekmichal.signalrkore.transports.LongPollingTransport
 import eu.lepicekmichal.signalrkore.transports.ServerSentEventsTransport
 import eu.lepicekmichal.signalrkore.transports.WebSocketTransport
-import eu.lepicekmichal.signalrkore.utils.dispatchers
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
@@ -17,7 +16,9 @@ import io.ktor.util.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
@@ -69,7 +70,7 @@ class HubConnection private constructor(
 ) : HubCommunication() {
 
     private val job = SupervisorJob()
-    private val scope = CoroutineScope(job + dispatchers.io)
+    private val scope = CoroutineScope(job + Dispatchers.IO)
 
     private val pingReset = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val pingTicker = pingReset
@@ -158,7 +159,7 @@ class HubConnection private constructor(
             throw RuntimeException("Connection closed while trying to connect.")
         }
 
-        withContext(dispatchers.io) {
+        withContext(Dispatchers.IO) {
             launch {
                 val handshake = Json.encodeToString(Handshake(protocol = protocol.name, version = protocol.version)) + RECORD_SEPARATOR
                 transport.send(handshake.toByteArray())
@@ -298,7 +299,7 @@ class HubConnection private constructor(
 
         _connectionState.value = HubConnectionState.RECONNECTING
 
-        scope.launch(dispatchers.io) {
+        scope.launch(Dispatchers.IO) {
             val mark = TimeSource.Monotonic.markNow()
             var retryCount = 0
 

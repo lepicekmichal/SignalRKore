@@ -6,6 +6,7 @@
 
 ![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
 ![badge-jvm](http://img.shields.io/badge/platform-jvm-DB413D.svg?style=flat)
+![badge-ios](http://img.shields.io/badge/platform-ios-lightgray?style=flat)
 
 SignalR Kore is a client library connecting to ASP.NET Core server for real-time functionality. Enables server-side code to push content to
 clients and vice-versa. Instantly.
@@ -15,7 +16,7 @@ clients and vice-versa. Instantly.
 |                            | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) |            SignalR Kore             |
 |:---------------------------|:--------------------------------------------------------------------------------------------:|:-----------------------------------:|
 | Written in                 |                                             Java                                             |               Kotlin                |
-| KMM / KMP                  |                                   :heavy_multiplication_x:                                   |            Android, JVM             |
+| KMM / KMP                  |                                   :heavy_multiplication_x:                                   |          Android, JVM, iOS          |
 | Network                    |                                         OkHttp only                                          |    Ktor (any engine pluggable*)     |
 | Async                      |                                            RxJava                                            |             Coroutines              |
 | Serialization              |                                   Gson (non-customizable)                                    | Kotlinx Serializable (customizable) |
@@ -258,7 +259,7 @@ automaticReconnect = AutomaticReconnect.Custom { previousRetryCount, elapsedTime
 - [ ] Add tests
 - [x] Implement streams
 - [x] Extend to JVM
-- [ ] Extend to iOS
+- [x] Extend to iOS
 - [ ] Implement transport fallback
 - [x] Implement automatic reconnect
 

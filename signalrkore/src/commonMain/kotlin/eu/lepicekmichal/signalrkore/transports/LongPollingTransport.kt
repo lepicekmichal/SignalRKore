@@ -2,13 +2,14 @@ package eu.lepicekmichal.signalrkore.transports
 
 import eu.lepicekmichal.signalrkore.Transport
 import eu.lepicekmichal.signalrkore.utils.buildAsHeaders
-import eu.lepicekmichal.signalrkore.utils.dispatchers
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
@@ -22,7 +23,7 @@ import kotlin.jvm.Volatile
 internal class LongPollingTransport(private val headers: Map<String, String>, private val client: HttpClient) : Transport {
 
     private val job = SupervisorJob()
-    private val scope = CoroutineScope(job + dispatchers.io)
+    private val scope = CoroutineScope(job + Dispatchers.IO)
 
     private val incoming: MutableSharedFlow<ByteArray> = MutableSharedFlow()
 

@@ -11,26 +11,35 @@ version = requireNotNull(project.findProperty("VERSION_NAME"))
 kotlin {
     androidTarget {
         publishLibraryVariants("release")
-    }
 
-    targets {
-        androidTarget {
-            compilations.all {
-                kotlinOptions {
-                    jvmTarget = JavaVersion.VERSION_17.toString()
-                }
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = JavaVersion.VERSION_17.toString()
             }
         }
-        jvm {
-            compilations.all {
-                kotlinOptions.jvmTarget = JavaVersion.VERSION_17.toString()
-            }
+    }
+
+    jvm {
+        compilations.all {
+            kotlinOptions.jvmTarget = JavaVersion.VERSION_17.toString()
+        }
+    }
+
+    listOf(
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "SignalRKore"
+            isStatic = true
         }
     }
 
     jvmToolchain(17)
 
     sourceSets {
+        applyDefaultHierarchyTemplate()
+
         all {
             languageSettings {
                 optIn("kotlin.RequiresOptIn")
@@ -63,7 +72,10 @@ kotlin {
         val androidMain by getting {
             dependsOn(jvmMain)
         }
-        val androidUnitTest by getting
+
+        iosMain.dependencies {
+
+        }
     }
 }
 

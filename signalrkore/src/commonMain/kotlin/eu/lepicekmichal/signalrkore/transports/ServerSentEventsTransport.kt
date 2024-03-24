@@ -1,10 +1,11 @@
 package eu.lepicekmichal.signalrkore.transports
 
 import eu.lepicekmichal.signalrkore.Transport
-import eu.lepicekmichal.signalrkore.utils.dispatchers
-import io.ktor.client.*
-import io.ktor.utils.io.core.*
+import io.ktor.client.HttpClient
+import io.ktor.utils.io.core.toByteArray
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.Flow
@@ -14,7 +15,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okio.BufferedSource
-import okio.Closeable
 import okio.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -29,7 +29,7 @@ internal class ServerSentEventsTransport(
     private val delegate = ServerSentEventsDelegate(client)
 
     private val job = SupervisorJob()
-    private val scope = CoroutineScope(job + dispatchers.io)
+    private val scope = CoroutineScope(job + Dispatchers.IO)
 
     private val incoming: MutableSharedFlow<ByteArray> = MutableSharedFlow()
 
@@ -65,12 +65,12 @@ internal class ServerSentEventsTransport(
                                     }
                                 }
                             } finally {
-                                withContext(dispatchers.io) {
+                                withContext(Dispatchers.IO) {
                                     source.close()
                                 }
                             }
                         } finally {
-                            withContext(dispatchers.io) {
+                            withContext(Dispatchers.IO) {
                                 response.close()
                             }
                         }
@@ -113,6 +113,5 @@ internal class ServerSentEventsTransport(
     override suspend fun stop() {
         active = false
         job.cancelChildren()
-        //log("LongPolling transport stopped.")
     }
 }
