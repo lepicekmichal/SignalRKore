@@ -117,7 +117,7 @@ class HubConnection private constructor(
     ) : this(
         baseUrl = url.takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("A valid url is required."),
         protocol = protocol,
-        httpClient = (httpClient ?: HttpClient()).config {
+        httpClient = httpClient ?: HttpClient().config {
             install(WebSockets)
             install(HttpTimeout)
             install(ContentNegotiation) { json(Json) }
@@ -206,7 +206,7 @@ class HubConnection private constructor(
     private suspend fun startNegotiate(
         url: String,
         negotiateAttempts: Int,
-        headers: Map<String, String>
+        headers: Map<String, String>,
     ): Negotiation {
         if (connectionState.value != HubConnectionState.CONNECTING && connectionState.value != HubConnectionState.RECONNECTING)
             throw RuntimeException("HubConnection trying to negotiate when not in the CONNECTING state.")
@@ -256,7 +256,7 @@ class HubConnection private constructor(
 
     private suspend fun handleNegotiate(
         url: String,
-        headers: Map<String, String>
+        headers: Map<String, String>,
     ): NegotiateResponse {
         val response = httpClient.post(resolveNegotiateUrl(url)) {
             headers {
@@ -443,7 +443,7 @@ class HubConnection private constructor(
         itemType: KClass<T>,
         method: String,
         args: List<JsonElement>,
-        uploadStreams: List<Flow<JsonElement>>
+        uploadStreams: List<Flow<JsonElement>>,
     ): Flow<T> {
         connectedCheck("stream")
 
