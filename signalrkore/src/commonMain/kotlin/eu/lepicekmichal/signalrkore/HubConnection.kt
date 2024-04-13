@@ -6,6 +6,7 @@ import eu.lepicekmichal.signalrkore.transports.WebSocketTransport
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
+import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
@@ -131,7 +132,7 @@ class HubConnection private constructor(
         logger = logger,
     )
 
-    suspend fun start() {
+    suspend fun start(reconnectionAttempt: Boolean = false) {
         if (connectionState.value != HubConnectionState.DISCONNECTED && connectionState.value != HubConnectionState.RECONNECTING) return
 
         if (connectionState.value == HubConnectionState.DISCONNECTED) {
@@ -142,7 +143,17 @@ class HubConnection private constructor(
             throw RuntimeException("Negotiation can only be skipped when using the WebSocket transport")
 
         val (negotiationTransport, negotiationUrl) = if (!skipNegotiate) {
-            startNegotiate(baseUrl, 0, headers)
+            try {
+                startNegotiate(baseUrl, 0, headers)
+            } catch (ex: Exception) {
+                if (!reconnectionAttempt) {
+                    if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(ex.message)
+                    else stop(ex.message)
+                    return
+                } else {
+                    throw ex
+                }
+            }
         } else {
             Negotiation(TransportEnum.WebSockets, baseUrl)
         }
@@ -153,7 +164,17 @@ class HubConnection private constructor(
             else -> WebSocketTransport(headers, httpClient)
         }
 
-        transport.start(negotiationUrl)
+        try {
+            transport.start(negotiationUrl)
+        } catch (ex: Exception) {
+            if (!reconnectionAttempt) {
+                if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(ex.message)
+                else stop(ex.message)
+                return
+            } else {
+                throw ex
+            }
+        }
 
         if (connectionState.value != HubConnectionState.CONNECTING && connectionState.value != HubConnectionState.RECONNECTING) {
             throw RuntimeException("Connection closed while trying to connect.")
@@ -313,7 +334,7 @@ class HubConnection private constructor(
 
                 try {
                     logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting - #${retryCount} attempt")
-                    start()
+                    start(reconnectionAttempt = true)
                 } catch (ex: Exception) {
                     logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting error: $ex")
                     continue
@@ -340,7 +361,7 @@ class HubConnection private constructor(
 
         logger.log(Logger.Level.INFO, "[$baseUrl] ${errorMessage ?: "Stopping connection"}")
 
-        transport.stop()
+        if (::transport.isInitialized) transport.stop()
         job.cancelChildren()
     }
 
@@ -352,7 +373,7 @@ class HubConnection private constructor(
 
         val serializedMessage: ByteArray = protocol.writeMessage(message)
         scope.launch {
-            transport.send(serializedMessage)
+            if (::transport.isInitialized) transport.send(serializedMessage)
             logger.log(Logger.Level.INFO, "Sent hub data: $message")
             resetKeepAlive()
         }

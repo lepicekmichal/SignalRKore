@@ -178,6 +178,14 @@ httpClient = HttpClient(OkHttp) {
 }
 ```
 
+But if you do opt-in to pass the http client, make sure it has websockets installed
+
+```kotlin
+HttpClient {
+    install(WebSockets)
+}
+```
+
 ### You may pass your own HubProtocol
 
 With custom parsing and encoding
