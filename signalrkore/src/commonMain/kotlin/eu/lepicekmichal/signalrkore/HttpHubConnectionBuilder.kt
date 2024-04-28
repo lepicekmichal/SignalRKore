@@ -12,6 +12,8 @@ class HttpHubConnectionBuilder(private val url: String) {
      */
     var transportEnum: TransportEnum = TransportEnum.All
 
+    internal var transport: Transport? = null
+
     /**
      * The [HttpClient] to be used by the [eu.lepicekmichal.signalrkore.HubConnection]
      */
@@ -72,6 +74,7 @@ class HttpHubConnectionBuilder(private val url: String) {
         if (::protocol.isInitialized) protocol else JsonHubProtocol(logger),
         handshakeResponseTimeout,
         headers.toMap(),
+        transport,
         transportEnum,
         json,
         logger,

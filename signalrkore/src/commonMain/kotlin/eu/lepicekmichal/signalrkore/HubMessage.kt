@@ -30,7 +30,7 @@ sealed class HubMessage {
         data class Blocking(
             override val target: String,
             override val arguments: List<JsonElement>,
-            val invocationId: String,
+            val invocationId: String?,
             override val streamIds: List<String>? = null,
         ) :
             Invocation() {
@@ -116,9 +116,10 @@ sealed class HubMessage {
             return when (val type = jsonObject["type"]?.jsonPrimitive?.int) {
                 HubMessageType.INVOCATION.value -> when {
                     jsonObject["streamIds"]?.jsonArray != null -> Invocation.Blocking.serializer()
-                    jsonObject["invocationId"]?.jsonPrimitive?.contentOrNull != null -> Invocation.Streaming.serializer()
+                    jsonObject["invocationId"]?.jsonPrimitive?.contentOrNull != null -> Invocation.Blocking.serializer()
                     else -> Invocation.NonBlocking.serializer()
                 }
+                HubMessageType.STREAM_INVOCATION.value -> Invocation.Streaming.serializer()
                 HubMessageType.PING.value -> Ping.serializer()
                 HubMessageType.CLOSE.value -> Close.serializer()
                 HubMessageType.STREAM_ITEM.value -> StreamItem.serializer()

@@ -4,7 +4,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.serialization.json.JsonElement
 import kotlin.reflect.KClass
 
@@ -12,11 +14,19 @@ abstract class HubCommunication {
 
     protected abstract val receivedInvocations: SharedFlow<HubMessage.Invocation>
 
+    internal val subscribersWithResult: MutableMap<String, Boolean> = mutableMapOf()
+
     protected abstract val logger: Logger
 
     protected abstract fun <T : Any> T.toJson(kClass: KClass<T>): JsonElement
 
     protected abstract fun <T : Any> JsonElement.fromJson(kClass: KClass<T>): T
+
+    protected abstract suspend fun <TResult> handleInvocation(
+        message: HubMessage.Invocation,
+        resultType: KClass<TResult>,
+        callback: suspend () -> TResult
+    ) where TResult : Any
 
     abstract fun send(method: String, args: List<JsonElement>, uploadStreams: List<Flow<JsonElement>> = emptyList())
 
@@ -15727,20 +15737,39 @@ abstract class HubCommunication {
                 )
             }
 
+    suspend fun on(target: String, callback: () -> Unit) {
+        on(target)
+            .collect {
+                handleInvocation(it, Unit::class) { callback() }
+            }
+    }
+
     suspend fun <T1> on(target: String, param1: KClass<T1>, callback: (T1) -> Unit) where T1 : Any {
         on(target)
-            .collect { callback(it.arguments[0].fromJson(param1)) }
+            .collect {
+                handleInvocation(it, Unit::class) {
+                    callback(it.arguments[0].fromJson(param1))
+                }
+            }
     }
+
+    suspend inline fun <reified T1> on(target: String, noinline callback: (T1) -> Unit) where T1: Any =
+        on(target, T1::class, callback)
 
     suspend fun <T1, T2> on(target: String, param1: KClass<T1>, param2: KClass<T2>, callback: (T1, T2) -> Unit) where T1 : Any, T2 : Any {
         on(target)
             .collect {
-                callback(
-                    it.arguments[0].fromJson(param1),
-                    it.arguments[1].fromJson(param2),
-                )
+                handleInvocation(it, Unit::class) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                    )
+                }
             }
     }
+
+    suspend inline fun <reified T1, reified T2> on(target: String, noinline callback: (T1, T2) -> Unit) where T1: Any, T2: Any =
+        on(target, T1::class, T2::class, callback)
 
     suspend fun <T1, T2, T3> on(
         target: String,
@@ -15751,13 +15780,21 @@ abstract class HubCommunication {
     ) where T1 : Any, T2 : Any, T3 : Any {
         on(target)
             .collect {
-                callback(
-                    it.arguments[0].fromJson(param1),
-                    it.arguments[1].fromJson(param2),
-                    it.arguments[2].fromJson(param3),
-                )
+                handleInvocation(it, Unit::class) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                        it.arguments[2].fromJson(param3),
+                    )
+                }
             }
     }
+    
+    suspend inline fun <reified T1, reified T2, reified T3> on(
+        target: String,
+        noinline callback: (T1, T2, T3) -> Unit
+    ) where T1: Any, T2: Any, T3: Any =
+        on(target, T1::class, T2::class, T3::class, callback)
 
     suspend fun <T1, T2, T3, T4> on(
         target: String,
@@ -15769,14 +15806,22 @@ abstract class HubCommunication {
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any {
         on(target)
             .collect {
-                callback(
-                    it.arguments[0].fromJson(param1),
-                    it.arguments[1].fromJson(param2),
-                    it.arguments[2].fromJson(param3),
-                    it.arguments[3].fromJson(param4),
-                )
+                handleInvocation(it, Unit::class) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                        it.arguments[2].fromJson(param3),
+                        it.arguments[3].fromJson(param4),
+                    )
+                }
             }
     }
+
+    suspend inline fun <reified T1, reified T2, reified T3, reified T4> on(
+        target: String,
+        noinline callback: (T1, T2, T3, T4) -> Unit
+    ) where T1: Any, T2: Any, T3: Any, T4: Any =
+        on(target, T1::class, T2::class, T3::class, T4::class, callback)
 
     suspend fun <T1, T2, T3, T4, T5> on(
         target: String,
@@ -15789,15 +15834,23 @@ abstract class HubCommunication {
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any {
         on(target)
             .collect {
-                callback(
-                    it.arguments[0].fromJson(param1),
-                    it.arguments[1].fromJson(param2),
-                    it.arguments[2].fromJson(param3),
-                    it.arguments[3].fromJson(param4),
-                    it.arguments[4].fromJson(param5),
-                )
+                handleInvocation(it, Unit::class) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                        it.arguments[2].fromJson(param3),
+                        it.arguments[3].fromJson(param4),
+                        it.arguments[4].fromJson(param5),
+                    )
+                }
             }
     }
+
+    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5> on(
+        target: String,
+        noinline callback: (T1, T2, T3, T4, T5) -> Unit
+    ) where T1: Any, T2: Any, T3: Any, T4: Any, T5: Any =
+        on(target, T1::class, T2::class, T3::class, T4::class, T5::class, callback)
 
     suspend fun <T1, T2, T3, T4, T5, T6> on(
         target: String,
@@ -15811,16 +15864,24 @@ abstract class HubCommunication {
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any {
         on(target)
             .collect {
-                callback(
-                    it.arguments[0].fromJson(param1),
-                    it.arguments[1].fromJson(param2),
-                    it.arguments[2].fromJson(param3),
-                    it.arguments[3].fromJson(param4),
-                    it.arguments[4].fromJson(param5),
-                    it.arguments[5].fromJson(param6),
-                )
+                handleInvocation(it, Unit::class) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                        it.arguments[2].fromJson(param3),
+                        it.arguments[3].fromJson(param4),
+                        it.arguments[4].fromJson(param5),
+                        it.arguments[5].fromJson(param6),
+                    )
+                }
             }
     }
+
+    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified T6> on(
+        target: String,
+        noinline callback: (T1, T2, T3, T4, T5, T6) -> Unit
+    ) where T1: Any, T2: Any, T3: Any, T4: Any, T5: Any, T6: Any =
+        on(target, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, callback)
 
     suspend fun <T1, T2, T3, T4, T5, T6, T7> on(
         target: String,
@@ -15835,17 +15896,25 @@ abstract class HubCommunication {
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any {
         on(target)
             .collect {
-                callback(
-                    it.arguments[0].fromJson(param1),
-                    it.arguments[1].fromJson(param2),
-                    it.arguments[2].fromJson(param3),
-                    it.arguments[3].fromJson(param4),
-                    it.arguments[4].fromJson(param5),
-                    it.arguments[5].fromJson(param6),
-                    it.arguments[6].fromJson(param7),
-                )
+                handleInvocation(it, Unit::class) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                        it.arguments[2].fromJson(param3),
+                        it.arguments[3].fromJson(param4),
+                        it.arguments[4].fromJson(param5),
+                        it.arguments[5].fromJson(param6),
+                        it.arguments[6].fromJson(param7),
+                    )
+                }
             }
     }
+
+    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified T6, reified T7> on(
+        target: String,
+        noinline callback: (T1, T2, T3, T4, T5, T6, T7) -> Unit
+    ) where T1: Any, T2: Any, T3: Any, T4: Any, T5: Any, T6: Any, T7: Any =
+        on(target, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, T7::class, callback)
 
     suspend fun <T1, T2, T3, T4, T5, T6, T7, T8> on(
         target: String,
@@ -15861,18 +15930,291 @@ abstract class HubCommunication {
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 : Any {
         on(target)
             .collect {
-                callback(
-                    it.arguments[0].fromJson(param1),
-                    it.arguments[1].fromJson(param2),
-                    it.arguments[2].fromJson(param3),
-                    it.arguments[3].fromJson(param4),
-                    it.arguments[4].fromJson(param5),
-                    it.arguments[5].fromJson(param6),
-                    it.arguments[6].fromJson(param7),
-                    it.arguments[7].fromJson(param8),
-                )
+                handleInvocation(it, Unit::class) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                        it.arguments[2].fromJson(param3),
+                        it.arguments[3].fromJson(param4),
+                        it.arguments[4].fromJson(param5),
+                        it.arguments[5].fromJson(param6),
+                        it.arguments[6].fromJson(param7),
+                        it.arguments[7].fromJson(param8),
+                    )
+                }
             }
     }
+
+    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified T6, reified T7, reified T8> on(
+        target: String,
+        noinline callback: (T1, T2, T3, T4, T5, T6, T7, T8) -> Unit
+    ) where T1: Any, T2: Any, T3: Any, T4: Any, T5: Any, T6: Any, T7: Any, T8: Any =
+        on(target, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, T7::class, T8::class, callback)
+
+    private fun onWithResult(target: String): Flow<HubMessage.Invocation> {
+        if (subscribersWithResult[target] == true) {
+            throw RuntimeException("'$target' already has a value returning handler. Multiple return values are not supported.")
+        }
+
+        return receivedInvocations
+            .onSubscription {
+                subscribersWithResult[target] = true
+            }
+            .onCompletion {
+                subscribersWithResult[target] = false
+            }
+            .filter { it.target == target }
+            .onEach { logger.log(Logger.Level.INFO, "Received invocation: $it") }
+    }
+
+    suspend fun <TResult> onWithResult(
+        target: String,
+        resultType: KClass<TResult>,
+        callback: suspend () -> TResult
+    ) where TResult: Any {
+        onWithResult(target)
+            .collect {
+                handleInvocation(it, resultType) {
+                    callback()
+                }
+            }
+    }
+
+    suspend inline fun <reified TResult> onWithResult(
+        target: String,
+        noinline callback: suspend () -> TResult
+    ) where TResult: Any =
+        onWithResult(target, TResult::class, callback)
+
+    suspend fun <T1, TResult> onWithResult(
+        target: String,
+        param1: KClass<T1>,
+        resultType: KClass<TResult>,
+        callback: suspend (T1) -> TResult
+    ) where T1 : Any, TResult: Any {
+        onWithResult(target)
+            .collect {
+                handleInvocation(it, resultType) {
+                    callback(it.arguments[0].fromJson(param1))
+                }
+            }
+    }
+
+    suspend inline fun <reified T1, reified TResult> onWithResult(
+        target: String,
+        noinline callback: suspend (T1) -> TResult
+    ) where T1 : Any, TResult: Any =
+        onWithResult(target, T1::class, TResult::class, callback)
+
+    suspend fun <T1, T2, TResult> onWithResult(
+        target: String,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        resultType: KClass<TResult>,
+        callback: suspend (T1, T2) -> TResult
+    ) where T1 : Any, T2 : Any, TResult: Any {
+        onWithResult(target)
+            .collect {
+                handleInvocation(it, resultType) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2)
+                    )
+                }
+            }
+    }
+
+    suspend inline fun <reified T1, reified T2, reified TResult> onWithResult(
+        target: String,
+        noinline callback: suspend (T1, T2) -> TResult
+    ) where T1 : Any, T2 : Any, TResult: Any =
+        onWithResult(target, T1::class, T2::class, TResult::class, callback)
+
+    suspend fun <T1, T2, T3, TResult> onWithResult(
+        target: String,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        param3: KClass<T3>,
+        resultType: KClass<TResult>,
+        callback: suspend (T1, T2, T3) -> TResult
+    ) where T1 : Any, T2 : Any, T3 : Any, TResult: Any {
+        onWithResult(target)
+            .collect {
+                handleInvocation(it, resultType) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                        it.arguments[2].fromJson(param3)
+                    )
+                }
+            }
+    }
+
+    suspend inline fun <reified T1, reified T2, reified T3, reified TResult> onWithResult(
+        target: String,
+        noinline callback: suspend (T1, T2, T3) -> TResult
+    ) where T1 : Any, T2 : Any, T3 : Any, TResult: Any =
+        onWithResult(target, T1::class, T2::class, T3::class, TResult::class, callback)
+
+    suspend fun <T1, T2, T3, T4, TResult> onWithResult(
+        target: String,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        param3: KClass<T3>,
+        param4: KClass<T4>,
+        resultType: KClass<TResult>,
+        callback: suspend (T1, T2, T3, T4) -> TResult
+    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, TResult: Any {
+        onWithResult(target)
+            .collect {
+                handleInvocation(it, resultType) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                        it.arguments[2].fromJson(param3),
+                        it.arguments[3].fromJson(param4)
+                    )
+                }
+            }
+    }
+
+    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified TResult> onWithResult(
+        target: String,
+        noinline callback: suspend (T1, T2, T3, T4) -> TResult
+    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, TResult: Any =
+        onWithResult(target, T1::class, T2::class, T3::class, T4::class, TResult::class, callback)
+
+    suspend fun <T1, T2, T3, T4, T5, TResult> onWithResult(
+        target: String,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        param3: KClass<T3>,
+        param4: KClass<T4>,
+        param5: KClass<T5>,
+        resultType: KClass<TResult>,
+        callback: suspend (T1, T2, T3, T4, T5) -> TResult
+    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, TResult: Any {
+        onWithResult(target)
+            .collect {
+                handleInvocation(it, resultType) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                        it.arguments[2].fromJson(param3),
+                        it.arguments[3].fromJson(param4),
+                        it.arguments[4].fromJson(param5)
+                    )
+                }
+            }
+    }
+
+    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified TResult> onWithResult(
+        target: String,
+        noinline callback: suspend (T1, T2, T3, T4, T5) -> TResult
+    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, TResult: Any =
+        onWithResult(target, T1::class, T2::class, T3::class, T4::class, T5::class, TResult::class, callback)
+
+    suspend fun <T1, T2, T3, T4, T5, T6, TResult> onWithResult(
+        target: String,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        param3: KClass<T3>,
+        param4: KClass<T4>,
+        param5: KClass<T5>,
+        param6: KClass<T6>,
+        resultType: KClass<TResult>,
+        callback: suspend (T1, T2, T3, T4, T5, T6) -> TResult
+    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, TResult: Any {
+        onWithResult(target)
+            .collect {
+                handleInvocation(it, resultType) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                        it.arguments[2].fromJson(param3),
+                        it.arguments[3].fromJson(param4),
+                        it.arguments[4].fromJson(param5),
+                        it.arguments[5].fromJson(param6)
+                    )
+                }
+            }
+    }
+
+    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified T6, reified TResult> onWithResult(
+        target: String,
+        noinline callback: suspend (T1, T2, T3, T4, T5, T6) -> TResult
+    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, TResult: Any =
+        onWithResult(target, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, TResult::class, callback)
+
+    suspend fun <T1, T2, T3, T4, T5, T6, T7, TResult> onWithResult(
+        target: String,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        param3: KClass<T3>,
+        param4: KClass<T4>,
+        param5: KClass<T5>,
+        param6: KClass<T6>,
+        param7: KClass<T7>,
+        resultType: KClass<TResult>,
+        callback: suspend (T1, T2, T3, T4, T5, T6, T7) -> TResult
+    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, TResult: Any {
+        onWithResult(target)
+            .collect {
+                handleInvocation(it, resultType) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                        it.arguments[2].fromJson(param3),
+                        it.arguments[3].fromJson(param4),
+                        it.arguments[4].fromJson(param5),
+                        it.arguments[5].fromJson(param6),
+                        it.arguments[6].fromJson(param7)
+                    )
+                }
+            }
+    }
+
+    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified T6, reified T7, reified TResult> onWithResult(
+        target: String,
+        noinline callback: suspend (T1, T2, T3, T4, T5, T6, T7) -> TResult
+    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, TResult: Any =
+        onWithResult(target, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, T7::class, TResult::class, callback)
+
+    suspend fun <T1, T2, T3, T4, T5, T6, T7, T8, TResult> onWithResult(
+        target: String,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        param3: KClass<T3>,
+        param4: KClass<T4>,
+        param5: KClass<T5>,
+        param6: KClass<T6>,
+        param7: KClass<T7>,
+        param8: KClass<T8>,
+        resultType: KClass<TResult>,
+        callback: suspend (T1, T2, T3, T4, T5, T6, T7, T8) -> TResult
+    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 : Any, TResult: Any {
+        onWithResult(target)
+            .collect {
+                handleInvocation(it, resultType) {
+                    callback(
+                        it.arguments[0].fromJson(param1),
+                        it.arguments[1].fromJson(param2),
+                        it.arguments[2].fromJson(param3),
+                        it.arguments[3].fromJson(param4),
+                        it.arguments[4].fromJson(param5),
+                        it.arguments[5].fromJson(param6),
+                        it.arguments[6].fromJson(param7),
+                        it.arguments[7].fromJson(param8)
+                    )
+                }
+            }
+    }
+
+    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified T6, reified T7, reified T8, reified TResult> onWithResult(
+        target: String,
+        noinline callback: suspend (T1, T2, T3, T4, T5, T6, T7, T8) -> TResult
+    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 : Any, TResult: Any =
+        onWithResult(target, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, T7::class, T8::class, TResult::class, callback)
 
     fun <A : Any> stream(itemType: KClass<A>, method: String): Flow<A> =
         stream(

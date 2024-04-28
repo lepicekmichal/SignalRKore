@@ -6,7 +6,6 @@ import eu.lepicekmichal.signalrkore.transports.WebSocketTransport
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
-import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
@@ -112,6 +111,7 @@ class HubConnection private constructor(
         protocol: HubProtocol,
         handshakeResponseTimeout: Duration,
         headers: Map<String, String>,
+        transport: Transport?,
         transportEnum: TransportEnum,
         json: Json,
         logger: Logger,
@@ -130,7 +130,11 @@ class HubConnection private constructor(
         automaticReconnect = automaticReconnect,
         json = json,
         logger = logger,
-    )
+    ) {
+        if (transport != null) {
+            this.transport = transport
+        }
+    }
 
     suspend fun start(reconnectionAttempt: Boolean = false) {
         if (connectionState.value != HubConnectionState.DISCONNECTED && connectionState.value != HubConnectionState.RECONNECTING) return
@@ -158,10 +162,12 @@ class HubConnection private constructor(
             Negotiation(TransportEnum.WebSockets, baseUrl)
         }
 
-        transport = when (negotiationTransport) {
-            TransportEnum.LongPolling -> LongPollingTransport(headers, httpClient)
-            TransportEnum.ServerSentEvents -> ServerSentEventsTransport(headers, httpClient)
-            else -> WebSocketTransport(headers, httpClient)
+        if (!::transport.isInitialized) {
+            transport = when (negotiationTransport) {
+                TransportEnum.LongPolling -> LongPollingTransport(headers, httpClient)
+                TransportEnum.ServerSentEvents -> ServerSentEventsTransport(headers, httpClient)
+                else -> WebSocketTransport(headers, httpClient)
+            }
         }
 
         try {
@@ -391,7 +397,7 @@ class HubConnection private constructor(
                         if (message.allowReconnect && automaticReconnect !is AutomaticReconnect.Inactive) reconnect(message.error)
                         else stop(message.error)
 
-                is HubMessage.Invocation -> receivedInvocations.emit(message)
+                is HubMessage.Invocation -> processReceivedInvocation(message)
                 is HubMessage.Ping -> Unit
                 is HubMessage.CancelInvocation -> Unit // this should not happen according to standard
                 is HubMessage.StreamItem -> receivedStreamItems.emit(message)
@@ -400,11 +406,50 @@ class HubConnection private constructor(
         }
     }
 
+    private suspend fun processReceivedInvocation(message: HubMessage.Invocation) {
+        if (message is HubMessage.Invocation.Blocking && message.invocationId != null && subscribersWithResult[message.target] != true) {
+            logger.log(Logger.Level.ERROR, "Failed to find a value returning handler for ${message.target} method. Sending error to server.")
+
+            val resultMessage = HubMessage.Completion.Error(invocationId = message.invocationId, error = "Client did not provide a result.")
+            sendHubMessage(resultMessage)
+        }
+
+        receivedInvocations.emit(message)
+    }
+
     @OptIn(InternalSerializationApi::class)
     override fun <T : Any> T.toJson(kClass: KClass<T>): JsonElement = json.encodeToJsonElement(kClass.serializer(), this)
 
     @OptIn(InternalSerializationApi::class)
     override fun <T : Any> JsonElement.fromJson(kClass: KClass<T>): T = json.decodeFromJsonElement(kClass.serializer(), this)
+
+    override suspend fun <TResult> handleInvocation(
+        message: HubMessage.Invocation,
+        resultType: KClass<TResult>,
+        callback: suspend () -> TResult
+    ) where TResult : Any {
+        val invocationId = if (message is HubMessage.Invocation.Blocking) message.invocationId else null
+        var resultMessage: HubMessage.Completion? = null
+
+        try {
+            val result = callback()
+            if (invocationId != null) {
+                resultMessage = HubMessage.Completion.Resulted(invocationId = invocationId, result = result.toJson(resultType))
+            }
+        } catch (ex: Exception) {
+            logger.log(Logger.Level.ERROR, "Invoking client side method '${message.target}' failed: $ex")
+            if (invocationId != null) {
+                resultMessage = HubMessage.Completion.Error(invocationId = invocationId, error = ex.message.orEmpty())
+            }
+        }
+
+        if (resultMessage != null) {
+            connectedCheck("handleInvocation")
+            sendHubMessage(resultMessage)
+        } else if (resultType != Unit::class) {
+            logger.log(Logger.Level.ERROR, "Result given for '${message.target}' method but server is not expecting a result.")
+        }
+    }
 
     override fun send(method: String, args: List<JsonElement>, uploadStreams: List<Flow<JsonElement>>) {
         connectedCheck("send")
