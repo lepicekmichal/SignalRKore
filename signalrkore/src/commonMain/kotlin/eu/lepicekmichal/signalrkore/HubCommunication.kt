@@ -15805,7 +15805,7 @@ abstract class HubCommunication {
             }
 
     suspend fun <T> on(target: String, resultType: KClass<T>, callback: () -> T) where T : Any {
-        on(target = target, hasResult = true)
+        on(target = target, hasResult = resultType != Unit::class)
             .collect {
                 handleInvocation(
                     message = it,
@@ -15816,7 +15816,7 @@ abstract class HubCommunication {
     }
 
     suspend fun <T, T1> on(target: String, resultType: KClass<T>, param1: KClass<T1>, callback: (T1) -> T) where T : Any, T1 : Any {
-        on(target = target, hasResult = true)
+        on(target = target, hasResult = resultType != Unit::class)
             .collect {
                 handleInvocation(
                     message = it,
@@ -15833,7 +15833,7 @@ abstract class HubCommunication {
         param2: KClass<T2>,
         callback: (T1, T2) -> T,
     ) where T : Any, T1 : Any, T2 : Any {
-        on(target = target, hasResult = true)
+        on(target = target, hasResult = resultType != Unit::class)
             .collect {
                 handleInvocation(
                     message = it,
@@ -15856,7 +15856,7 @@ abstract class HubCommunication {
         param3: KClass<T3>,
         callback: (T1, T2, T3) -> T,
     ) where T : Any, T1 : Any, T2 : Any, T3 : Any {
-        on(target = target, hasResult = true)
+        on(target = target, hasResult = resultType != Unit::class)
             .collect {
                 handleInvocation(
                     message = it,
@@ -15881,7 +15881,7 @@ abstract class HubCommunication {
         param4: KClass<T4>,
         callback: (T1, T2, T3, T4) -> T,
     ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any {
-        on(target = target, hasResult = true)
+        on(target = target, hasResult = resultType != Unit::class)
             .collect {
                 handleInvocation(
                     message = it,
@@ -15908,7 +15908,7 @@ abstract class HubCommunication {
         param5: KClass<T5>,
         callback: (T1, T2, T3, T4, T5) -> T,
     ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any {
-        on(target = target, hasResult = true)
+        on(target = target, hasResult = resultType != Unit::class)
             .collect {
                 handleInvocation(
                     message = it,
@@ -15937,7 +15937,7 @@ abstract class HubCommunication {
         param6: KClass<T6>,
         callback: (T1, T2, T3, T4, T5, T6) -> T,
     ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any {
-        on(target = target, hasResult = true)
+        on(target = target, hasResult = resultType != Unit::class)
             .collect {
                 handleInvocation(
                     message = it,
@@ -15968,7 +15968,7 @@ abstract class HubCommunication {
         param7: KClass<T7>,
         callback: (T1, T2, T3, T4, T5, T6, T7) -> T,
     ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any {
-        on(target = target, hasResult = true)
+        on(target = target, hasResult = resultType != Unit::class)
             .collect {
                 handleInvocation(
                     message = it,
@@ -16001,7 +16001,7 @@ abstract class HubCommunication {
         param8: KClass<T8>,
         callback: (T1, T2, T3, T4, T5, T6, T7, T8) -> T,
     ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 : Any {
-        on(target = target, hasResult = true)
+        on(target = target, hasResult = resultType != Unit::class)
             .collect {
                 handleInvocation(
                     message = it,
