@@ -14,7 +14,7 @@ abstract class HubCommunication {
 
     protected abstract val receivedInvocations: SharedFlow<HubMessage.Invocation>
 
-    protected val resultProviderRegistry: MutableSet<String> = mutableSetOf()
+    private val resultProviderRegistry: MutableSet<String> = mutableSetOf()
 
     protected abstract val logger: Logger
 
