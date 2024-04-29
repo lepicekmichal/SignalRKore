@@ -6,7 +6,6 @@ import eu.lepicekmichal.signalrkore.transports.WebSocketTransport
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
-import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
@@ -19,7 +18,6 @@ import io.ktor.utils.io.core.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
@@ -121,7 +119,7 @@ class HubConnection private constructor(
         httpClient = httpClient ?: HttpClient().config {
             install(WebSockets)
             install(HttpTimeout)
-            install(ContentNegotiation) { json(Json) }
+            install(ContentNegotiation) { json(Json(json) { ignoreUnknownKeys = true }) }
         },
         transportEnum = transportEnum,
         handshakeResponseTimeout = if (handshakeResponseTimeout.isPositive()) handshakeResponseTimeout else 15.seconds,
@@ -242,9 +240,18 @@ class HubConnection private constructor(
             is NegotiateResponse.Redirect -> {
                 if (negotiateAttempts >= MAX_NEGOTIATE_ATTEMPTS) throw RuntimeException("Negotiate redirection limit exceeded.")
 
-                return startNegotiate(response.url, negotiateAttempts + 1, headers.map { (key, value) ->
-                    key to (if (key == "Authorization") "Bearer " + response.accessToken else value)
-                }.toMap())
+                return startNegotiate(
+                    response.url + "&access_token=${response.accessToken}",
+                    negotiateAttempts + 1,
+                    headers.map {
+                            (
+                                key,
+                                value,
+                            ),
+                        ->
+                        key to (if (key == "Authorization") "Bearer " + response.accessToken else value)
+                    }.toMap()
+                )
             }
 
             is NegotiateResponse.Success -> {
@@ -385,13 +392,15 @@ class HubConnection private constructor(
 
         messages.forEach { message ->
             when (message) {
-                is HubMessage.Close ->
+                is HubMessage.Close -> {
                     if (message.allowReconnect && automaticReconnect !is AutomaticReconnect.Inactive) reconnect(message.error)
                     else
                         if (message.allowReconnect && automaticReconnect !is AutomaticReconnect.Inactive) reconnect(message.error)
                         else stop(message.error)
+                }
 
                 is HubMessage.Invocation -> receivedInvocations.emit(message)
+                is HubMessage.StreamInvocation -> Unit // not supported yet
                 is HubMessage.Ping -> Unit
                 is HubMessage.CancelInvocation -> Unit // this should not happen according to standard
                 is HubMessage.StreamItem -> receivedStreamItems.emit(message)
@@ -417,6 +426,11 @@ class HubConnection private constructor(
         )
         sendHubMessage(invocationMessage)
         launchStreams(streamIds, uploadStreams)
+    }
+
+    override fun complete(message: HubMessage.Completion) {
+        connectedCheck("complete")
+        sendHubMessage(message)
     }
 
     private fun launchStreams(streamIds: List<String>, uploadStreams: List<Flow<JsonElement>>) {
@@ -471,7 +485,7 @@ class HubConnection private constructor(
         val invocationId = UUID.randomUUID()
 
         val streamIds = uploadStreams.map { UUID.randomUUID() }
-        val invocationMessage = HubMessage.Invocation.Streaming(
+        val invocationMessage = HubMessage.StreamInvocation(
             target = method,
             arguments = args,
             invocationId = invocationId,

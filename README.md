@@ -63,11 +63,16 @@ connection.send("broadcastMessage", "Michal", "Hello")
 connection.invoke("broadcastMessage", "Michal", "Hello")
 ```
 
-### Receive from server
+### Receive from server and/or return result
 
 ```kotlin
-connection.on("broadcastMessage", String::class, String::class) { user, message ->
+connection.on("broadcastMessage", param1 = String::class, param2 = String::class) { user, message ->
     println("User $user is saying: $message")
+}
+
+connection.on("sneakAttack", resultType = String::class, param1 = Boolean::class) { surprise ->
+    if (surprise) "Wow, you got me"
+    else "I saw you waaay from over there"
 }
 ```
 
@@ -126,6 +131,8 @@ connection.send("UploadStream", flow<Int> {
         delay(500)
     }
 })
+
+Receiving stream invocation and responding to it is in
 ```
 
 ## Keep up with connection status
@@ -178,11 +185,13 @@ httpClient = HttpClient(OkHttp) {
 }
 ```
 
-But if you do opt-in to pass the http client, make sure it has websockets installed
+But if you do opt-in to pass the http client, make sure it has WebSockets and other plugins installed
 
 ```kotlin
 HttpClient {
     install(WebSockets)
+    install(HttpTimeout)
+    install(ContentNegotiation) { json() }
 }
 ```
 
@@ -270,6 +279,7 @@ automaticReconnect = AutomaticReconnect.Custom { previousRetryCount, elapsedTime
 - [x] Extend to iOS
 - [ ] Implement transport fallback
 - [x] Implement automatic reconnect
+- [ ] Reacting to stream invocation from server
 
 > Special thanks goes to [AzureSignalR ChatRoomLocal sample](https://github.com/aspnet/AzureSignalR-samples/tree/main/samples/ChatRoomLocal)
 > without which I would never start to write this library client.

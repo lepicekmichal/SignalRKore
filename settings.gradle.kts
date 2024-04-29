@@ -19,3 +19,5 @@ include(
     ":androidApp",
     ":signalrkore",
 )
+
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")

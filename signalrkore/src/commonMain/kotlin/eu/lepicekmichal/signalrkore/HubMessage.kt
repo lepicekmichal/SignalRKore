@@ -42,22 +42,22 @@ sealed class HubMessage {
         data class NonBlocking(
             override val target: String,
             override val arguments: List<JsonElement>,
-            override val streamIds: List<String>? = null
+            override val streamIds: List<String>? = null,
         ) : Invocation() {
             @EncodeDefault
             override val type: Int = HubMessageType.INVOCATION.value
         }
+    }
 
-        @Serializable
-        data class Streaming(
-            override val target: String,
-            override val arguments: List<JsonElement>,
-            val invocationId: String,
-            override val streamIds: List<String>? = null
-        ) : Invocation() {
-            @EncodeDefault
-            override val type: Int = HubMessageType.STREAM_INVOCATION.value
-        }
+    @Serializable
+    data class StreamInvocation(
+        val target: String,
+        val arguments: List<JsonElement>,
+        val invocationId: String,
+        val streamIds: List<String>? = null,
+    ) : HubMessage() {
+        @EncodeDefault
+        override val type: Int = HubMessageType.STREAM_INVOCATION.value
     }
 
     @Serializable
@@ -111,14 +111,16 @@ sealed class HubMessage {
     }
 
     object MessageSerializer : JsonContentPolymorphicSerializer<HubMessage>(HubMessage::class) {
-        override fun selectDeserializer(element: JsonElement): DeserializationStrategy<out HubMessage> {
+        override fun selectDeserializer(element: JsonElement): DeserializationStrategy<HubMessage> {
             val jsonObject = element.jsonObject
             return when (val type = jsonObject["type"]?.jsonPrimitive?.int) {
                 HubMessageType.INVOCATION.value -> when {
                     jsonObject["streamIds"]?.jsonArray != null -> Invocation.Blocking.serializer()
-                    jsonObject["invocationId"]?.jsonPrimitive?.contentOrNull != null -> Invocation.Streaming.serializer()
+                    jsonObject["invocationId"]?.jsonPrimitive?.contentOrNull != null -> Invocation.Blocking.serializer()
                     else -> Invocation.NonBlocking.serializer()
                 }
+
+                HubMessageType.STREAM_INVOCATION.value -> StreamInvocation.serializer()
                 HubMessageType.PING.value -> Ping.serializer()
                 HubMessageType.CLOSE.value -> Close.serializer()
                 HubMessageType.STREAM_ITEM.value -> StreamItem.serializer()
@@ -128,6 +130,7 @@ sealed class HubMessage {
                     jsonObject["result"] != null && jsonObject["result"] !is JsonNull -> Completion.Resulted.serializer()
                     else -> Completion.Simple.serializer()
                 }
+
                 else -> error("unknown type $type")
             }
         }
