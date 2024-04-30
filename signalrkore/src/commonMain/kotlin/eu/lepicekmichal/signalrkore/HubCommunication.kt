@@ -15818,6 +15818,9 @@ abstract class HubCommunication {
             }
     }
 
+    suspend inline fun <reified T> on(target: String, noinline callback: suspend () -> T) where T: Any =
+        on(target, T::class, callback)
+
     suspend inline fun <reified T, reified T1> on(target: String, noinline callback: suspend (T1) -> T) where T: Any, T1: Any =
         on(target, T::class, T1::class, callback)
 
@@ -16058,14 +16061,6 @@ abstract class HubCommunication {
         noinline callback: suspend (T1, T2, T3, T4, T5, T6, T7, T8) -> T
     ) where T: Any, T1: Any, T2: Any, T3: Any, T4: Any, T5: Any, T6: Any, T7: Any, T8: Any =
         on(target, T::class, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, T7::class, T8::class, callback)
-
-    suspend fun on(target: String, callback: suspend () -> Unit) {
-        on(
-            target = target,
-            resultType = Unit::class,
-            callback = callback,
-        )
-    }
 
     suspend fun <T1> on(target: String, param1: KClass<T1>, callback: suspend (T1) -> Unit) where T1 : Any {
         on(
