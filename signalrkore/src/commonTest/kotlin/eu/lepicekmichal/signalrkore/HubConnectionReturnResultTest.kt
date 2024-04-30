@@ -16,7 +16,7 @@ class HubConnectionReturnResultTest {
 
         var called = false
         val job = launch {
-            hubConnection.onWithResult<Int>("inc") {
+            hubConnection.on("inc", resultType = Int::class) {
                 called = true
                 10
             }
@@ -43,9 +43,7 @@ class HubConnectionReturnResultTest {
         val hubConnection = createHubConnection(mockTransport)
         val nonResultCalled = CompletableSubject()
         val job = launch {
-            hubConnection.on("inc") {
-                nonResultCalled.complete()
-            }
+            hubConnection.on("inc") { nonResultCalled.complete() }
         }
 
         testScheduler.advanceUntilIdle()
@@ -85,7 +83,7 @@ class HubConnectionReturnResultTest {
         val hubConnection = createHubConnection(mockTransport)
 
         val job = launch {
-            hubConnection.onWithResult<Int>("inc") {
+            hubConnection.on("inc", resultType = Int::class) {
                 throw RuntimeException("Custom error.")
             }
         }
@@ -110,15 +108,15 @@ class HubConnectionReturnResultTest {
         val hubConnection = createHubConnection(mockTransport)
 
         val job = launch {
-            hubConnection.onWithResult<String>("inc") { "value" }
+            hubConnection.on("inc", resultType = String::class) { "value" }
         }
 
         testScheduler.advanceUntilIdle()
 
         val exception = assertFailsWith<RuntimeException> {
-            hubConnection.onWithResult<String>("inc") { "value2" }
+            hubConnection.on("inc", resultType = String::class) { "value2" }
         }
-        assertEquals("'inc' already has a value returning handler. Multiple return values are not supported.", exception.message)
+        assertEquals("There can be only one function for returning result on blocking invocation (method: inc)", exception.message)
 
         job.cancel()
     }
@@ -134,13 +132,11 @@ class HubConnectionReturnResultTest {
         val nonResultCalled = CompletableSubject()
 
         val job = launch {
-            hubConnection.onWithResult<Int>("m") { 42 }
+            hubConnection.on("m", resultType = Int::class) { 42 }
         }
 
         val job2 = launch {
-            hubConnection.on("fin") {
-                nonResultCalled.complete()
-            }
+            hubConnection.on("fin") { nonResultCalled.complete() }
         }
 
         testScheduler.advanceUntilIdle()
@@ -152,7 +148,7 @@ class HubConnectionReturnResultTest {
 
         nonResultCalled.waitForCompletion()
 
-        testLogger.assertLogEquals("Result given for 'm' method but server is not expecting a result.")
+        testLogger.assertLogEquals("Result was returned for 'm' method but server is not expecting any result.")
 
         job.cancel()
         job2.cancel()
@@ -166,8 +162,8 @@ class HubConnectionReturnResultTest {
 
         var calledWith: String? = null
         val job = launch {
-            hubConnection.onWithResult<String, Int>("inc") {
-                calledWith = it
+            hubConnection.on("inc", resultType = Int::class, param1 = String::class) { p ->
+                calledWith = p
                 10
             }
         }
@@ -195,7 +191,12 @@ class HubConnectionReturnResultTest {
         var calledWith: String? = null
         var calledWith2: Int? = null
         val job = launch {
-            hubConnection.onWithResult<String, Int, String>("inc") { p1, p2 ->
+            hubConnection.on(
+                "inc",
+                resultType = String::class,
+                param1 = String::class,
+                param2 =  Int::class,
+            ) { p1, p2 ->
                 calledWith = p1
                 calledWith2 = p2
                 "bob"
@@ -227,7 +228,13 @@ class HubConnectionReturnResultTest {
         var calledWith2: Int? = null
         var calledWith3: IntArray? = null
         val job = launch {
-            hubConnection.onWithResult<String, Int, IntArray, String>("inc") { p1, p2, p3 ->
+            hubConnection.on(
+                "inc",
+                resultType = String::class,
+                param1 = String::class,
+                param2 =  Int::class,
+                param3 = IntArray::class,
+            ) { p1, p2, p3 ->
                 calledWith = p1
                 calledWith2 = p2
                 calledWith3 = p3
@@ -262,7 +269,14 @@ class HubConnectionReturnResultTest {
         var calledWith3: IntArray? = null
         var calledWith4: Boolean? = null
         val job = launch {
-            hubConnection.onWithResult<String, Int, IntArray, Boolean, String>("inc") { p1, p2, p3, p4 ->
+            hubConnection.on(
+                "inc",
+                resultType = String::class,
+                param1 = String::class,
+                param2 =  Int::class,
+                param3 = IntArray::class,
+                param4 = Boolean::class,
+            ) { p1, p2, p3, p4 ->
                 calledWith = p1
                 calledWith2 = p2
                 calledWith3 = p3
@@ -300,7 +314,15 @@ class HubConnectionReturnResultTest {
         var calledWith4: Boolean? = null
         var calledWith5: String? = null
         val job = launch {
-            hubConnection.onWithResult<String, Int, IntArray, Boolean, String, String>("inc") { p1, p2, p3, p4, p5 ->
+            hubConnection.on(
+                "inc",
+                resultType = String::class,
+                param1 = String::class,
+                param2 =  Int::class,
+                param3 = IntArray::class,
+                param4 = Boolean::class,
+                param5 = String::class,
+            ) { p1, p2, p3, p4, p5 ->
                 calledWith = p1
                 calledWith2 = p2
                 calledWith3 = p3
@@ -341,7 +363,16 @@ class HubConnectionReturnResultTest {
         var calledWith5: String? = null
         var calledWith6: Double? = null
         val job = launch {
-            hubConnection.onWithResult<String, Int, IntArray, Boolean, String, Double, String>("inc") { p1, p2, p3, p4, p5, p6 ->
+            hubConnection.on(
+                "inc",
+                resultType = String::class,
+                param1 = String::class,
+                param2 =  Int::class,
+                param3 = IntArray::class,
+                param4 = Boolean::class,
+                param5 = String::class,
+                param6 = Double::class,
+            ) { p1, p2, p3, p4, p5, p6 ->
                 calledWith = p1
                 calledWith2 = p2
                 calledWith3 = p3
@@ -385,7 +416,17 @@ class HubConnectionReturnResultTest {
         var calledWith6: Double? = null
         var calledWith7: String? = null
         val job = launch {
-            hubConnection.onWithResult<String, Int, IntArray, Boolean, String, Double, String, String>("inc") { p1, p2, p3, p4, p5, p6, p7 ->
+            hubConnection.on(
+                "inc",
+                resultType = String::class,
+                param1 = String::class,
+                param2 =  Int::class,
+                param3 = IntArray::class,
+                param4 = Boolean::class,
+                param5 = String::class,
+                param6 = Double::class,
+                param7 = String::class,
+            ) { p1, p2, p3, p4, p5, p6, p7 ->
                 calledWith = p1
                 calledWith2 = p2
                 calledWith3 = p3
@@ -432,7 +473,18 @@ class HubConnectionReturnResultTest {
         var calledWith7: String? = null
         var calledWith8: Int? = null
         val job = launch {
-            hubConnection.onWithResult<String, Int, IntArray, Boolean, String, Double, String, Int, String>("inc") { p1, p2, p3, p4, p5, p6, p7, p8 ->
+            hubConnection.on(
+                "inc",
+                resultType = String::class,
+                param1 = String::class,
+                param2 =  Int::class,
+                param3 = IntArray::class,
+                param4 = Boolean::class,
+                param5 = String::class,
+                param6 = Double::class,
+                param7 = String::class,
+                param8 = Int::class,
+            ) { p1, p2, p3, p4, p5, p6, p7, p8 ->
                 calledWith = p1
                 calledWith2 = p2
                 calledWith3 = p3
@@ -476,7 +528,7 @@ class HubConnectionReturnResultTest {
         val completeResult = CompletableSubject()
 
         val job = launch {
-            hubConnection.onWithResult<String>("inc") {
+            hubConnection.on("inc", resultType = String::class) {
                 resultCalled.complete()
                 completeResult.waitForCompletion()
                 "bob"
@@ -517,7 +569,7 @@ class HubConnectionReturnResultTest {
         val hubConnection = createHubConnection(mockTransport)
 
         val job = launch {
-            hubConnection.onWithResult<Int, String>("inc") { "bob" }
+            hubConnection.on("inc", String::class, Int::class) { _ -> "bob" }
         }
 
         testScheduler.advanceUntilIdle()

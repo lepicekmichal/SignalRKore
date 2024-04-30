@@ -16,16 +16,13 @@ class HubConnectionTest {
         val value = SingleSubject<Double>()
 
         val action: (Double) -> Unit = {
-            launch {
-                value.setResult((value.result ?: 0.0) + it)
-                if (value.result == 24.0) {
-                    completable.complete()
-                }
+            value.setResult((value.result ?: 0.0) + it)
+            if (value.result == 24.0) {
+                completable.complete()
             }
         }
-
-        val job = launch { hubConnection.on<Double>("add", action) }
-        val job2 = launch { hubConnection.on<Double>("add", action) }
+        val job = launch { hubConnection.on("add", action) }
+        val job2 = launch { hubConnection.on("add", action) }
 
         testScheduler.advanceUntilIdle()
 
@@ -45,12 +42,10 @@ class HubConnectionTest {
     fun `handler without param should be triggered`() = runTest {
         val mockTransport = MockTransport()
         val hubConnection = createHubConnection(mockTransport)
-        val completable = CompletableSubject()
 
+        val completable = CompletableSubject()
         val job = launch {
-            hubConnection.on("inc") {
-                completable.complete()
-            }
+            hubConnection.on("inc") { completable.complete() }
         }
 
         testScheduler.advanceUntilIdle()
@@ -71,8 +66,8 @@ class HubConnectionTest {
 
         var calledWith: String? = null
         val job = launch {
-            hubConnection.on<String>("inc") {
-                calledWith = it
+            hubConnection.on("inc", param1 = String::class) { p1 ->
+                calledWith = p1
                 completable.complete()
             }
         }
@@ -98,7 +93,7 @@ class HubConnectionTest {
         var calledWith: String? = null
         var calledWith2: Int? = null
         val job = launch {
-            hubConnection.on<String, Int>("inc") { p1, p2 ->
+            hubConnection.on("inc", param1 = String::class, param2 = Int::class) { p1, p2 ->
                 calledWith = p1
                 calledWith2 = p2
                 completable.complete()
@@ -128,7 +123,12 @@ class HubConnectionTest {
         var calledWith2: Int? = null
         var calledWith3: IntArray? = null
         val job = launch {
-            hubConnection.on<String, Int, IntArray>("inc") { p1, p2, p3 ->
+            hubConnection.on(
+                "inc",
+                param1 = String::class,
+                param2 = Int::class,
+                param3 = IntArray::class,
+            ) { p1, p2, p3 ->
                 calledWith = p1
                 calledWith2 = p2
                 calledWith3 = p3
@@ -161,7 +161,13 @@ class HubConnectionTest {
         var calledWith3: IntArray? = null
         var calledWith4: Boolean? = null
         val job = launch {
-            hubConnection.on<String, Int, IntArray, Boolean>("inc") { p1, p2, p3, p4 ->
+            hubConnection.on(
+                "inc",
+                param1 = String::class,
+                param2 = Int::class,
+                param3 = IntArray::class,
+                param4 = Boolean::class,
+            ) { p1, p2, p3, p4 ->
                 calledWith = p1
                 calledWith2 = p2
                 calledWith3 = p3
@@ -197,7 +203,14 @@ class HubConnectionTest {
         var calledWith4: Boolean? = null
         var calledWith5: String? = null
         val job = launch {
-            hubConnection.on<String, Int, IntArray, Boolean, String>("inc") { p1, p2, p3, p4, p5 ->
+            hubConnection.on(
+                "inc",
+                param1 = String::class,
+                param2 = Int::class,
+                param3 = IntArray::class,
+                param4 = Boolean::class,
+                param5 = String::class,
+            ) { p1, p2, p3, p4, p5 ->
                 calledWith = p1
                 calledWith2 = p2
                 calledWith3 = p3
@@ -236,7 +249,15 @@ class HubConnectionTest {
         var calledWith5: String? = null
         var calledWith6: Double? = null
         val job = launch {
-            hubConnection.on<String, Int, IntArray, Boolean, String, Double>("inc") { p1, p2, p3, p4, p5, p6 ->
+            hubConnection.on(
+                "inc",
+                param1 = String::class,
+                param2 = Int::class,
+                param3 = IntArray::class,
+                param4 = Boolean::class,
+                param5 = String::class,
+                param6 = Double::class,
+            ) { p1, p2, p3, p4, p5, p6 ->
                 calledWith = p1
                 calledWith2 = p2
                 calledWith3 = p3
@@ -278,7 +299,16 @@ class HubConnectionTest {
         var calledWith6: Double? = null
         var calledWith7: String? = null
         val job = launch {
-            hubConnection.on<String, Int, IntArray, Boolean, String, Double, String>("inc") { p1, p2, p3, p4, p5, p6, p7 ->
+            hubConnection.on(
+                "inc",
+                param1 = String::class,
+                param2 = Int::class,
+                param3 = IntArray::class,
+                param4 = Boolean::class,
+                param5 = String::class,
+                param6 = Double::class,
+                param7 = String::class,
+            ) { p1, p2, p3, p4, p5, p6, p7 ->
                 calledWith = p1
                 calledWith2 = p2
                 calledWith3 = p3
@@ -323,7 +353,17 @@ class HubConnectionTest {
         var calledWith7: String? = null
         var calledWith8: Int? = null
         val job = launch {
-            hubConnection.on<String, Int, IntArray, Boolean, String, Double, String, Int>("inc") { p1, p2, p3, p4, p5, p6, p7, p8 ->
+            hubConnection.on(
+                "inc",
+                param1 = String::class,
+                param2 = Int::class,
+                param3 = IntArray::class,
+                param4 = Boolean::class,
+                param5 = String::class,
+                param6 = Double::class,
+                param7 = String::class,
+                param8 = Int::class,
+            ) { p1, p2, p3, p4, p5, p6, p7, p8 ->
                 calledWith = p1
                 calledWith2 = p2
                 calledWith3 = p3
@@ -366,14 +406,14 @@ class HubConnectionTest {
         val value2 = SingleSubject<String>()
 
         val job = launch {
-            hubConnection.on<String>("inc") { p1 ->
+            hubConnection.on("inc", param1 = String::class) { p1 ->
                 value1.setResult(p1)
                 throw RuntimeException("throw from on handler")
             }
         }
 
         val job2 = launch {
-            hubConnection.on<String>("inc") { p1 ->
+            hubConnection.on("inc", param1 = String::class) { p1 ->
                 value2.setResult(p1)
             }
         }

@@ -5,6 +5,7 @@ fun interface Logger {
 
     enum class Level {
         INFO,
+        WARNING,
         ERROR,
     }
 }

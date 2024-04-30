@@ -14,7 +14,7 @@ abstract class HubCommunication {
 
     protected abstract val receivedInvocations: SharedFlow<HubMessage.Invocation>
 
-    internal val subscribersWithResult: MutableMap<String, Boolean> = mutableMapOf()
+    internal val resultProviderRegistry: MutableSet<String> = mutableSetOf()
 
     protected abstract val logger: Logger
 
@@ -22,11 +22,7 @@ abstract class HubCommunication {
 
     protected abstract fun <T : Any> JsonElement.fromJson(kClass: KClass<T>): T
 
-    protected abstract suspend fun <TResult> handleInvocation(
-        message: HubMessage.Invocation,
-        resultType: KClass<TResult>,
-        callback: suspend () -> TResult
-    ) where TResult : Any
+    protected abstract fun complete(message: HubMessage.Completion)
 
     abstract fun send(method: String, args: List<JsonElement>, uploadStreams: List<Flow<JsonElement>> = emptyList())
 
@@ -58,7 +54,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         send(
             method = method,
@@ -73,7 +69,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         send(
             method = method,
@@ -93,7 +89,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         send(
             method = method,
@@ -116,7 +112,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         send(
             method = method,
@@ -142,7 +138,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         send(
             method = method,
@@ -171,7 +167,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         send(
             method = method,
@@ -203,7 +199,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         send(
             method = method,
@@ -240,7 +236,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         send(
             method = method,
@@ -257,7 +253,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         send(
             method = method,
@@ -279,7 +275,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         send(
             method = method,
@@ -304,7 +300,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         send(
             method = method,
@@ -332,7 +328,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         send(
             method = method,
@@ -363,7 +359,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         send(
             method = method,
@@ -397,7 +393,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         send(
             method = method,
@@ -427,7 +423,7 @@ abstract class HubCommunication {
         argType1: KClass<T1>,
         argType2: KClass<T2>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         send(
             method = method,
@@ -444,7 +440,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         send(
             method = method,
@@ -463,7 +459,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         send(
             method = method,
@@ -487,7 +483,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         send(
             method = method,
@@ -514,7 +510,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         send(
             method = method,
@@ -544,7 +540,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         send(
             method = method,
@@ -577,7 +573,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         send(
             method = method,
@@ -613,7 +609,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         send(
             method = method,
@@ -636,7 +632,7 @@ abstract class HubCommunication {
         arg3: T3,
         argType1: KClass<T1>,
         argType2: KClass<T2>,
-        argType3: KClass<T3>
+        argType3: KClass<T3>,
     ) =
         send(
             method = method,
@@ -653,7 +649,7 @@ abstract class HubCommunication {
         argType2: KClass<T2>,
         argType3: KClass<T3>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         send(
             method = method,
@@ -672,7 +668,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         send(
             method = method,
@@ -693,7 +689,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         send(
             method = method,
@@ -719,7 +715,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         send(
             method = method,
@@ -748,7 +744,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         send(
             method = method,
@@ -780,7 +776,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         send(
             method = method,
@@ -815,7 +811,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         send(
             method = method,
@@ -853,7 +849,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         send(
             method = method,
@@ -878,7 +874,7 @@ abstract class HubCommunication {
         argType1: KClass<T1>,
         argType2: KClass<T2>,
         argType3: KClass<T3>,
-        argType4: KClass<T4>
+        argType4: KClass<T4>,
     ) =
         send(
             method = method,
@@ -897,7 +893,7 @@ abstract class HubCommunication {
         argType3: KClass<T3>,
         argType4: KClass<T4>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         send(
             method = method,
@@ -918,7 +914,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         send(
             method = method,
@@ -941,7 +937,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         send(
             method = method,
@@ -969,7 +965,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         send(
             method = method,
@@ -1000,7 +996,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         send(
             method = method,
@@ -1034,7 +1030,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         send(
             method = method,
@@ -1071,7 +1067,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         send(
             method = method,
@@ -1111,7 +1107,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         send(
             method = method,
@@ -1138,7 +1134,7 @@ abstract class HubCommunication {
         argType2: KClass<T2>,
         argType3: KClass<T3>,
         argType4: KClass<T4>,
-        argType5: KClass<T5>
+        argType5: KClass<T5>,
     ) =
         send(
             method = method,
@@ -1165,7 +1161,7 @@ abstract class HubCommunication {
         argType4: KClass<T4>,
         argType5: KClass<T5>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         send(
             method = method,
@@ -1194,7 +1190,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         send(
             method = method,
@@ -1225,7 +1221,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         send(
             method = method,
@@ -1261,7 +1257,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         send(
             method = method,
@@ -1300,7 +1296,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         send(
             method = method,
@@ -1342,7 +1338,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         send(
             method = method,
@@ -1387,7 +1383,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         send(
             method = method,
@@ -1435,7 +1431,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         send(
             method = method,
@@ -1470,7 +1466,7 @@ abstract class HubCommunication {
         argType3: KClass<T3>,
         argType4: KClass<T4>,
         argType5: KClass<T5>,
-        argType6: KClass<T6>
+        argType6: KClass<T6>,
     ) =
         send(
             method = method,
@@ -1500,7 +1496,7 @@ abstract class HubCommunication {
         argType5: KClass<T5>,
         argType6: KClass<T6>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         send(
             method = method,
@@ -1532,7 +1528,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         send(
             method = method,
@@ -1566,7 +1562,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         send(
             method = method,
@@ -1605,7 +1601,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         send(
             method = method,
@@ -1647,7 +1643,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         send(
             method = method,
@@ -1692,7 +1688,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         send(
             method = method,
@@ -1740,7 +1736,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         send(
             method = method,
@@ -1791,7 +1787,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         send(
             method = method,
@@ -1829,7 +1825,7 @@ abstract class HubCommunication {
         argType4: KClass<T4>,
         argType5: KClass<T5>,
         argType6: KClass<T6>,
-        argType7: KClass<T7>
+        argType7: KClass<T7>,
     ) =
         send(
             method = method,
@@ -1862,7 +1858,7 @@ abstract class HubCommunication {
         argType6: KClass<T6>,
         argType7: KClass<T7>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         send(
             method = method,
@@ -1897,7 +1893,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         send(
             method = method,
@@ -1934,7 +1930,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         send(
             method = method,
@@ -1976,7 +1972,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         send(
             method = method,
@@ -2021,7 +2017,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         send(
             method = method,
@@ -2069,7 +2065,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         send(
             method = method,
@@ -2120,7 +2116,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         send(
             method = method,
@@ -2174,7 +2170,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         send(
             method = method,
@@ -2215,7 +2211,7 @@ abstract class HubCommunication {
         argType5: KClass<T5>,
         argType6: KClass<T6>,
         argType7: KClass<T7>,
-        argType8: KClass<T8>
+        argType8: KClass<T8>,
     ) =
         send(
             method = method,
@@ -2251,7 +2247,7 @@ abstract class HubCommunication {
         argType7: KClass<T7>,
         argType8: KClass<T8>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         send(
             method = method,
@@ -2289,7 +2285,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         send(
             method = method,
@@ -2329,7 +2325,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         send(
             method = method,
@@ -2374,7 +2370,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         send(
             method = method,
@@ -2422,7 +2418,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         send(
             method = method,
@@ -2473,7 +2469,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         send(
             method = method,
@@ -2527,7 +2523,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         send(
             method = method,
@@ -2584,7 +2580,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         send(
             method = method,
@@ -2629,7 +2625,7 @@ abstract class HubCommunication {
         method: String,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         send(
             method = method,
@@ -2646,7 +2642,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         send(
             method = method,
@@ -2666,7 +2662,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         send(
             method = method,
@@ -2689,7 +2685,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         send(
             method = method,
@@ -2715,7 +2711,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         send(
             method = method,
@@ -2744,7 +2740,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         send(
             method = method,
@@ -2786,7 +2782,7 @@ abstract class HubCommunication {
         method: String,
         arg1: T1,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         send(
             method = method,
@@ -2803,7 +2799,7 @@ abstract class HubCommunication {
         arg1: T1,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         send(
             method = method,
@@ -2823,7 +2819,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         send(
             method = method,
@@ -2846,7 +2842,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         send(
             method = method,
@@ -2872,7 +2868,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         send(
             method = method,
@@ -2901,7 +2897,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         send(
             method = method,
@@ -2933,7 +2929,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         send(
             method = method,
@@ -2982,7 +2978,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         send(
             method = method,
@@ -3002,7 +2998,7 @@ abstract class HubCommunication {
         arg2: T2,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         send(
             method = method,
@@ -3025,7 +3021,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         send(
             method = method,
@@ -3051,7 +3047,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         send(
             method = method,
@@ -3080,7 +3076,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         send(
             method = method,
@@ -3112,7 +3108,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         send(
             method = method,
@@ -3147,7 +3143,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         send(
             method = method,
@@ -3189,7 +3185,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         arg3: T3,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         send(
             method = method,
@@ -3209,7 +3205,7 @@ abstract class HubCommunication {
         arg2: T2,
         arg3: T3,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         send(
             method = method,
@@ -3232,7 +3228,7 @@ abstract class HubCommunication {
         arg3: T3,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         send(
             method = method,
@@ -3258,7 +3254,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         send(
             method = method,
@@ -3287,7 +3283,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         send(
             method = method,
@@ -3319,7 +3315,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         send(
             method = method,
@@ -3354,7 +3350,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         send(
             method = method,
@@ -3392,7 +3388,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         send(
             method = method,
@@ -3425,7 +3421,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         arg3: T3,
-        arg4: T4
+        arg4: T4,
     ) =
         send(
             method = method,
@@ -3445,7 +3441,7 @@ abstract class HubCommunication {
         arg2: T2,
         arg3: T3,
         arg4: T4,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         send(
             method = method,
@@ -3468,7 +3464,7 @@ abstract class HubCommunication {
         arg3: T3,
         arg4: T4,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         send(
             method = method,
@@ -3494,7 +3490,7 @@ abstract class HubCommunication {
         arg4: T4,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         send(
             method = method,
@@ -3523,7 +3519,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         send(
             method = method,
@@ -3555,7 +3551,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         send(
             method = method,
@@ -3590,7 +3586,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         send(
             method = method,
@@ -3628,7 +3624,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         send(
             method = method,
@@ -3669,7 +3665,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         send(
             method = method,
@@ -3705,7 +3701,7 @@ abstract class HubCommunication {
         arg2: T2,
         arg3: T3,
         arg4: T4,
-        arg5: T5
+        arg5: T5,
     ) =
         send(
             method = method,
@@ -3728,7 +3724,7 @@ abstract class HubCommunication {
         arg3: T3,
         arg4: T4,
         arg5: T5,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         send(
             method = method,
@@ -3754,7 +3750,7 @@ abstract class HubCommunication {
         arg4: T4,
         arg5: T5,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         send(
             method = method,
@@ -3783,7 +3779,7 @@ abstract class HubCommunication {
         arg5: T5,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         send(
             method = method,
@@ -3815,7 +3811,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         send(
             method = method,
@@ -3850,7 +3846,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         send(
             method = method,
@@ -3888,7 +3884,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         send(
             method = method,
@@ -3929,7 +3925,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         send(
             method = method,
@@ -3973,7 +3969,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         send(
             method = method,
@@ -4012,7 +4008,7 @@ abstract class HubCommunication {
         arg3: T3,
         arg4: T4,
         arg5: T5,
-        arg6: T6
+        arg6: T6,
     ) =
         send(
             method = method,
@@ -4038,7 +4034,7 @@ abstract class HubCommunication {
         arg4: T4,
         arg5: T5,
         arg6: T6,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         send(
             method = method,
@@ -4067,7 +4063,7 @@ abstract class HubCommunication {
         arg5: T5,
         arg6: T6,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         send(
             method = method,
@@ -4099,7 +4095,7 @@ abstract class HubCommunication {
         arg6: T6,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         send(
             method = method,
@@ -4134,7 +4130,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         send(
             method = method,
@@ -4172,7 +4168,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         send(
             method = method,
@@ -4213,7 +4209,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         send(
             method = method,
@@ -4257,7 +4253,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         send(
             method = method,
@@ -4304,7 +4300,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         send(
             method = method,
@@ -4346,7 +4342,7 @@ abstract class HubCommunication {
         arg4: T4,
         arg5: T5,
         arg6: T6,
-        arg7: T7
+        arg7: T7,
     ) =
         send(
             method = method,
@@ -4375,7 +4371,7 @@ abstract class HubCommunication {
         arg5: T5,
         arg6: T6,
         arg7: T7,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         send(
             method = method,
@@ -4407,7 +4403,7 @@ abstract class HubCommunication {
         arg6: T6,
         arg7: T7,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         send(
             method = method,
@@ -4442,7 +4438,7 @@ abstract class HubCommunication {
         arg7: T7,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         send(
             method = method,
@@ -4480,7 +4476,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         send(
             method = method,
@@ -4521,7 +4517,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         send(
             method = method,
@@ -4565,7 +4561,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         send(
             method = method,
@@ -4612,7 +4608,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         send(
             method = method,
@@ -4662,7 +4658,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         send(
             method = method,
@@ -4707,7 +4703,7 @@ abstract class HubCommunication {
         arg5: T5,
         arg6: T6,
         arg7: T7,
-        arg8: T8
+        arg8: T8,
     ) =
         send(
             method = method,
@@ -4739,7 +4735,7 @@ abstract class HubCommunication {
         arg6: T6,
         arg7: T7,
         arg8: T8,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         send(
             method = method,
@@ -4774,7 +4770,7 @@ abstract class HubCommunication {
         arg7: T7,
         arg8: T8,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         send(
             method = method,
@@ -4812,7 +4808,7 @@ abstract class HubCommunication {
         arg8: T8,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         send(
             method = method,
@@ -4853,7 +4849,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         send(
             method = method,
@@ -4897,7 +4893,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         send(
             method = method,
@@ -4944,7 +4940,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         send(
             method = method,
@@ -4994,7 +4990,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         send(
             method = method,
@@ -5047,7 +5043,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         send(
             method = method,
@@ -5097,7 +5093,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             method = method,
@@ -5112,7 +5108,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             method = method,
@@ -5132,7 +5128,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             method = method,
@@ -5155,7 +5151,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             method = method,
@@ -5181,7 +5177,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             method = method,
@@ -5210,7 +5206,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             method = method,
@@ -5242,7 +5238,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             method = method,
@@ -5270,7 +5266,7 @@ abstract class HubCommunication {
         arg1: T1,
         argType1: KClass<T1>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             method = method,
@@ -5285,7 +5281,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             method = method,
@@ -5302,7 +5298,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             method = method,
@@ -5324,7 +5320,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             method = method,
@@ -5349,7 +5345,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             method = method,
@@ -5377,7 +5373,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             method = method,
@@ -5408,7 +5404,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             method = method,
@@ -5442,7 +5438,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             method = method,
@@ -5472,7 +5468,7 @@ abstract class HubCommunication {
         argType1: KClass<T1>,
         argType2: KClass<T2>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             method = method,
@@ -5489,7 +5485,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             method = method,
@@ -5508,7 +5504,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             method = method,
@@ -5532,7 +5528,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             method = method,
@@ -5559,7 +5555,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             method = method,
@@ -5589,7 +5585,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             method = method,
@@ -5622,7 +5618,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             method = method,
@@ -5658,7 +5654,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             method = method,
@@ -5681,7 +5677,7 @@ abstract class HubCommunication {
         arg3: T3,
         argType1: KClass<T1>,
         argType2: KClass<T2>,
-        argType3: KClass<T3>
+        argType3: KClass<T3>,
     ) =
         invoke(
             method = method,
@@ -5698,7 +5694,7 @@ abstract class HubCommunication {
         argType2: KClass<T2>,
         argType3: KClass<T3>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             method = method,
@@ -5717,7 +5713,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             method = method,
@@ -5738,7 +5734,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             method = method,
@@ -5764,7 +5760,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             method = method,
@@ -5793,7 +5789,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             method = method,
@@ -5825,7 +5821,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             method = method,
@@ -5860,7 +5856,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             method = method,
@@ -5898,7 +5894,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             method = method,
@@ -5923,7 +5919,7 @@ abstract class HubCommunication {
         argType1: KClass<T1>,
         argType2: KClass<T2>,
         argType3: KClass<T3>,
-        argType4: KClass<T4>
+        argType4: KClass<T4>,
     ) =
         invoke(
             method = method,
@@ -5942,7 +5938,7 @@ abstract class HubCommunication {
         argType3: KClass<T3>,
         argType4: KClass<T4>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             method = method,
@@ -5963,7 +5959,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             method = method,
@@ -5986,7 +5982,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             method = method,
@@ -6014,7 +6010,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             method = method,
@@ -6045,7 +6041,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             method = method,
@@ -6079,7 +6075,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             method = method,
@@ -6116,7 +6112,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             method = method,
@@ -6156,7 +6152,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             method = method,
@@ -6183,7 +6179,7 @@ abstract class HubCommunication {
         argType2: KClass<T2>,
         argType3: KClass<T3>,
         argType4: KClass<T4>,
-        argType5: KClass<T5>
+        argType5: KClass<T5>,
     ) =
         invoke(
             method = method,
@@ -6210,7 +6206,7 @@ abstract class HubCommunication {
         argType4: KClass<T4>,
         argType5: KClass<T5>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             method = method,
@@ -6239,7 +6235,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             method = method,
@@ -6270,7 +6266,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             method = method,
@@ -6306,7 +6302,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             method = method,
@@ -6345,7 +6341,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             method = method,
@@ -6387,7 +6383,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             method = method,
@@ -6432,7 +6428,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             method = method,
@@ -6480,7 +6476,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             method = method,
@@ -6515,7 +6511,7 @@ abstract class HubCommunication {
         argType3: KClass<T3>,
         argType4: KClass<T4>,
         argType5: KClass<T5>,
-        argType6: KClass<T6>
+        argType6: KClass<T6>,
     ) =
         invoke(
             method = method,
@@ -6545,7 +6541,7 @@ abstract class HubCommunication {
         argType5: KClass<T5>,
         argType6: KClass<T6>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             method = method,
@@ -6577,7 +6573,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             method = method,
@@ -6611,7 +6607,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             method = method,
@@ -6650,7 +6646,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             method = method,
@@ -6692,7 +6688,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             method = method,
@@ -6737,7 +6733,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             method = method,
@@ -6785,7 +6781,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             method = method,
@@ -6836,7 +6832,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             method = method,
@@ -6874,7 +6870,7 @@ abstract class HubCommunication {
         argType4: KClass<T4>,
         argType5: KClass<T5>,
         argType6: KClass<T6>,
-        argType7: KClass<T7>
+        argType7: KClass<T7>,
     ) =
         invoke(
             method = method,
@@ -6907,7 +6903,7 @@ abstract class HubCommunication {
         argType6: KClass<T6>,
         argType7: KClass<T7>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             method = method,
@@ -6942,7 +6938,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             method = method,
@@ -6979,7 +6975,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             method = method,
@@ -7021,7 +7017,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             method = method,
@@ -7066,7 +7062,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             method = method,
@@ -7114,7 +7110,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             method = method,
@@ -7165,7 +7161,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             method = method,
@@ -7219,7 +7215,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             method = method,
@@ -7260,7 +7256,7 @@ abstract class HubCommunication {
         argType5: KClass<T5>,
         argType6: KClass<T6>,
         argType7: KClass<T7>,
-        argType8: KClass<T8>
+        argType8: KClass<T8>,
     ) =
         invoke(
             method = method,
@@ -7296,7 +7292,7 @@ abstract class HubCommunication {
         argType7: KClass<T7>,
         argType8: KClass<T8>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             method = method,
@@ -7334,7 +7330,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             method = method,
@@ -7374,7 +7370,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             method = method,
@@ -7419,7 +7415,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             method = method,
@@ -7467,7 +7463,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             method = method,
@@ -7518,7 +7514,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             method = method,
@@ -7572,7 +7568,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             method = method,
@@ -7629,7 +7625,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             method = method,
@@ -7674,7 +7670,7 @@ abstract class HubCommunication {
         method: String,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             method = method,
@@ -7691,7 +7687,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             method = method,
@@ -7711,7 +7707,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             method = method,
@@ -7734,7 +7730,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             method = method,
@@ -7760,7 +7756,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             method = method,
@@ -7789,7 +7785,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             method = method,
@@ -7831,7 +7827,7 @@ abstract class HubCommunication {
         method: String,
         arg1: T1,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             method = method,
@@ -7848,7 +7844,7 @@ abstract class HubCommunication {
         arg1: T1,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             method = method,
@@ -7868,7 +7864,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             method = method,
@@ -7891,7 +7887,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             method = method,
@@ -7917,7 +7913,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             method = method,
@@ -7946,7 +7942,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             method = method,
@@ -7978,7 +7974,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             method = method,
@@ -8015,7 +8011,7 @@ abstract class HubCommunication {
         method: String,
         arg1: T1,
         arg2: T2,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             method = method,
@@ -8032,7 +8028,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             method = method,
@@ -8052,7 +8048,7 @@ abstract class HubCommunication {
         arg2: T2,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             method = method,
@@ -8075,7 +8071,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             method = method,
@@ -8101,7 +8097,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             method = method,
@@ -8130,7 +8126,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             method = method,
@@ -8162,7 +8158,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             method = method,
@@ -8197,7 +8193,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             method = method,
@@ -8239,7 +8235,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         arg3: T3,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             method = method,
@@ -8259,7 +8255,7 @@ abstract class HubCommunication {
         arg2: T2,
         arg3: T3,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             method = method,
@@ -8282,7 +8278,7 @@ abstract class HubCommunication {
         arg3: T3,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             method = method,
@@ -8308,7 +8304,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             method = method,
@@ -8337,7 +8333,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             method = method,
@@ -8369,7 +8365,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             method = method,
@@ -8404,7 +8400,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             method = method,
@@ -8442,7 +8438,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             method = method,
@@ -8475,7 +8471,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         arg3: T3,
-        arg4: T4
+        arg4: T4,
     ) =
         invoke(
             method = method,
@@ -8495,7 +8491,7 @@ abstract class HubCommunication {
         arg2: T2,
         arg3: T3,
         arg4: T4,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             method = method,
@@ -8518,7 +8514,7 @@ abstract class HubCommunication {
         arg3: T3,
         arg4: T4,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             method = method,
@@ -8544,7 +8540,7 @@ abstract class HubCommunication {
         arg4: T4,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             method = method,
@@ -8573,7 +8569,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             method = method,
@@ -8605,7 +8601,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             method = method,
@@ -8640,7 +8636,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             method = method,
@@ -8678,7 +8674,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             method = method,
@@ -8719,7 +8715,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             method = method,
@@ -8755,7 +8751,7 @@ abstract class HubCommunication {
         arg2: T2,
         arg3: T3,
         arg4: T4,
-        arg5: T5
+        arg5: T5,
     ) =
         invoke(
             method = method,
@@ -8778,7 +8774,7 @@ abstract class HubCommunication {
         arg3: T3,
         arg4: T4,
         arg5: T5,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             method = method,
@@ -8804,7 +8800,7 @@ abstract class HubCommunication {
         arg4: T4,
         arg5: T5,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             method = method,
@@ -8833,7 +8829,7 @@ abstract class HubCommunication {
         arg5: T5,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             method = method,
@@ -8865,7 +8861,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             method = method,
@@ -8900,7 +8896,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             method = method,
@@ -8938,7 +8934,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             method = method,
@@ -8979,7 +8975,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             method = method,
@@ -9023,7 +9019,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             method = method,
@@ -9062,7 +9058,7 @@ abstract class HubCommunication {
         arg3: T3,
         arg4: T4,
         arg5: T5,
-        arg6: T6
+        arg6: T6,
     ) =
         invoke(
             method = method,
@@ -9088,7 +9084,7 @@ abstract class HubCommunication {
         arg4: T4,
         arg5: T5,
         arg6: T6,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             method = method,
@@ -9117,7 +9113,7 @@ abstract class HubCommunication {
         arg5: T5,
         arg6: T6,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             method = method,
@@ -9149,7 +9145,7 @@ abstract class HubCommunication {
         arg6: T6,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             method = method,
@@ -9184,7 +9180,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             method = method,
@@ -9222,7 +9218,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             method = method,
@@ -9263,7 +9259,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             method = method,
@@ -9307,7 +9303,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             method = method,
@@ -9354,7 +9350,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             method = method,
@@ -9396,7 +9392,7 @@ abstract class HubCommunication {
         arg4: T4,
         arg5: T5,
         arg6: T6,
-        arg7: T7
+        arg7: T7,
     ) =
         invoke(
             method = method,
@@ -9425,7 +9421,7 @@ abstract class HubCommunication {
         arg5: T5,
         arg6: T6,
         arg7: T7,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             method = method,
@@ -9457,7 +9453,7 @@ abstract class HubCommunication {
         arg6: T6,
         arg7: T7,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             method = method,
@@ -9492,7 +9488,7 @@ abstract class HubCommunication {
         arg7: T7,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             method = method,
@@ -9530,7 +9526,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             method = method,
@@ -9571,7 +9567,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             method = method,
@@ -9615,7 +9611,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             method = method,
@@ -9662,7 +9658,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             method = method,
@@ -9712,7 +9708,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             method = method,
@@ -9757,7 +9753,7 @@ abstract class HubCommunication {
         arg5: T5,
         arg6: T6,
         arg7: T7,
-        arg8: T8
+        arg8: T8,
     ) =
         invoke(
             method = method,
@@ -9789,7 +9785,7 @@ abstract class HubCommunication {
         arg6: T6,
         arg7: T7,
         arg8: T8,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             method = method,
@@ -9824,7 +9820,7 @@ abstract class HubCommunication {
         arg7: T7,
         arg8: T8,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             method = method,
@@ -9862,7 +9858,7 @@ abstract class HubCommunication {
         arg8: T8,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             method = method,
@@ -9903,7 +9899,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             method = method,
@@ -9947,7 +9943,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             method = method,
@@ -9994,7 +9990,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             method = method,
@@ -10044,7 +10040,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             method = method,
@@ -10097,7 +10093,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             method = method,
@@ -10147,7 +10143,7 @@ abstract class HubCommunication {
         result: KClass<A>,
         method: String,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             result = result,
@@ -10163,7 +10159,7 @@ abstract class HubCommunication {
         method: String,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             result = result,
@@ -10182,7 +10178,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             result = result,
@@ -10204,7 +10200,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             result = result,
@@ -10229,7 +10225,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             result = result,
@@ -10257,7 +10253,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             result = result,
@@ -10288,7 +10284,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             result = result,
@@ -10323,7 +10319,7 @@ abstract class HubCommunication {
         result: KClass<A>,
         method: String,
         arg1: T1,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             result = result,
@@ -10339,7 +10335,7 @@ abstract class HubCommunication {
         method: String,
         arg1: T1,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             result = result,
@@ -10358,7 +10354,7 @@ abstract class HubCommunication {
         arg1: T1,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             result = result,
@@ -10380,7 +10376,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             result = result,
@@ -10405,7 +10401,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             result = result,
@@ -10433,7 +10429,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             result = result,
@@ -10464,7 +10460,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             result = result,
@@ -10498,7 +10494,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             result = result,
@@ -10538,7 +10534,7 @@ abstract class HubCommunication {
         method: String,
         arg1: T1,
         arg2: T2,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             result = result,
@@ -10557,7 +10553,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             result = result,
@@ -10579,7 +10575,7 @@ abstract class HubCommunication {
         arg2: T2,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             result = result,
@@ -10604,7 +10600,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             result = result,
@@ -10632,7 +10628,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             result = result,
@@ -10663,7 +10659,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             result = result,
@@ -10697,7 +10693,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             result = result,
@@ -10734,7 +10730,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             result = result,
@@ -10766,7 +10762,7 @@ abstract class HubCommunication {
         method: String,
         arg1: T1,
         arg2: T2,
-        arg3: T3
+        arg3: T3,
     ) =
         invoke(
             result = result,
@@ -10785,7 +10781,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         arg3: T3,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             result = result,
@@ -10807,7 +10803,7 @@ abstract class HubCommunication {
         arg2: T2,
         arg3: T3,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             result = result,
@@ -10832,7 +10828,7 @@ abstract class HubCommunication {
         arg3: T3,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             result = result,
@@ -10860,7 +10856,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             result = result,
@@ -10891,7 +10887,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             result = result,
@@ -10925,7 +10921,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             result = result,
@@ -10962,7 +10958,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             result = result,
@@ -11002,7 +10998,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             result = result,
@@ -11037,7 +11033,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         arg3: T3,
-        arg4: T4
+        arg4: T4,
     ) =
         invoke(
             result = result,
@@ -11059,7 +11055,7 @@ abstract class HubCommunication {
         arg2: T2,
         arg3: T3,
         arg4: T4,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             result = result,
@@ -11084,7 +11080,7 @@ abstract class HubCommunication {
         arg3: T3,
         arg4: T4,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             result = result,
@@ -11112,7 +11108,7 @@ abstract class HubCommunication {
         arg4: T4,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             result = result,
@@ -11143,7 +11139,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             result = result,
@@ -11177,7 +11173,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             result = result,
@@ -11214,7 +11210,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             result = result,
@@ -11254,7 +11250,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             result = result,
@@ -11297,7 +11293,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             result = result,
@@ -11335,7 +11331,7 @@ abstract class HubCommunication {
         arg2: T2,
         arg3: T3,
         arg4: T4,
-        arg5: T5
+        arg5: T5,
     ) =
         invoke(
             result = result,
@@ -11360,7 +11356,7 @@ abstract class HubCommunication {
         arg3: T3,
         arg4: T4,
         arg5: T5,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             result = result,
@@ -11388,7 +11384,7 @@ abstract class HubCommunication {
         arg4: T4,
         arg5: T5,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             result = result,
@@ -11419,7 +11415,7 @@ abstract class HubCommunication {
         arg5: T5,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             result = result,
@@ -11453,7 +11449,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             result = result,
@@ -11490,7 +11486,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             result = result,
@@ -11530,7 +11526,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             result = result,
@@ -11573,7 +11569,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             result = result,
@@ -11619,7 +11615,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             result = result,
@@ -11660,7 +11656,7 @@ abstract class HubCommunication {
         arg3: T3,
         arg4: T4,
         arg5: T5,
-        arg6: T6
+        arg6: T6,
     ) =
         invoke(
             result = result,
@@ -11688,7 +11684,7 @@ abstract class HubCommunication {
         arg4: T4,
         arg5: T5,
         arg6: T6,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             result = result,
@@ -11719,7 +11715,7 @@ abstract class HubCommunication {
         arg5: T5,
         arg6: T6,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             result = result,
@@ -11753,7 +11749,7 @@ abstract class HubCommunication {
         arg6: T6,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             result = result,
@@ -11790,7 +11786,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             result = result,
@@ -11830,7 +11826,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             result = result,
@@ -11873,7 +11869,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             result = result,
@@ -11919,7 +11915,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             result = result,
@@ -11968,7 +11964,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             result = result,
@@ -12012,7 +12008,7 @@ abstract class HubCommunication {
         arg4: T4,
         arg5: T5,
         arg6: T6,
-        arg7: T7
+        arg7: T7,
     ) =
         invoke(
             result = result,
@@ -12043,7 +12039,7 @@ abstract class HubCommunication {
         arg5: T5,
         arg6: T6,
         arg7: T7,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             result = result,
@@ -12077,7 +12073,7 @@ abstract class HubCommunication {
         arg6: T6,
         arg7: T7,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             result = result,
@@ -12114,7 +12110,7 @@ abstract class HubCommunication {
         arg7: T7,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             result = result,
@@ -12154,7 +12150,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             result = result,
@@ -12197,7 +12193,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             result = result,
@@ -12243,7 +12239,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             result = result,
@@ -12292,7 +12288,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             result = result,
@@ -12344,7 +12340,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             result = result,
@@ -12391,7 +12387,7 @@ abstract class HubCommunication {
         arg5: T5,
         arg6: T6,
         arg7: T7,
-        arg8: T8
+        arg8: T8,
     ) =
         invoke(
             result = result,
@@ -12425,7 +12421,7 @@ abstract class HubCommunication {
         arg6: T6,
         arg7: T7,
         arg8: T8,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         invoke(
             result = result,
@@ -12462,7 +12458,7 @@ abstract class HubCommunication {
         arg7: T7,
         arg8: T8,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         invoke(
             result = result,
@@ -12502,7 +12498,7 @@ abstract class HubCommunication {
         arg8: T8,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         invoke(
             result = result,
@@ -12545,7 +12541,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         invoke(
             result = result,
@@ -12591,7 +12587,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         invoke(
             result = result,
@@ -12640,7 +12636,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         invoke(
             result = result,
@@ -12692,7 +12688,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         invoke(
             result = result,
@@ -12747,7 +12743,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         invoke(
             result = result,
@@ -12801,7 +12797,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             result = result,
@@ -12819,7 +12815,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             result = result,
@@ -12842,7 +12838,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             result = result,
@@ -12868,7 +12864,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             result = result,
@@ -12897,7 +12893,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             result = result,
@@ -12929,7 +12925,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             result = result,
@@ -12964,7 +12960,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             result = result,
@@ -12997,7 +12993,7 @@ abstract class HubCommunication {
         arg1: T1,
         argType1: KClass<T1>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             result = result,
@@ -13015,7 +13011,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             result = result,
@@ -13035,7 +13031,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             result = result,
@@ -13060,7 +13056,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             result = result,
@@ -13088,7 +13084,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             result = result,
@@ -13119,7 +13115,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             result = result,
@@ -13153,7 +13149,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             result = result,
@@ -13190,7 +13186,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             result = result,
@@ -13214,7 +13210,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         argType1: KClass<T1>,
-        argType2: KClass<T2>
+        argType2: KClass<T2>,
     ) =
         invoke(
             result = result,
@@ -13232,7 +13228,7 @@ abstract class HubCommunication {
         argType1: KClass<T1>,
         argType2: KClass<T2>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             result = result,
@@ -13252,7 +13248,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             result = result,
@@ -13274,7 +13270,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             result = result,
@@ -13301,7 +13297,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             result = result,
@@ -13331,7 +13327,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             result = result,
@@ -13364,7 +13360,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             result = result,
@@ -13400,7 +13396,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             result = result,
@@ -13439,7 +13435,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             result = result,
@@ -13465,7 +13461,7 @@ abstract class HubCommunication {
         arg3: T3,
         argType1: KClass<T1>,
         argType2: KClass<T2>,
-        argType3: KClass<T3>
+        argType3: KClass<T3>,
     ) =
         invoke(
             result = result,
@@ -13485,7 +13481,7 @@ abstract class HubCommunication {
         argType2: KClass<T2>,
         argType3: KClass<T3>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             result = result,
@@ -13507,7 +13503,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             result = result,
@@ -13531,7 +13527,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             result = result,
@@ -13560,7 +13556,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             result = result,
@@ -13592,7 +13588,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             result = result,
@@ -13627,7 +13623,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             result = result,
@@ -13665,7 +13661,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             result = result,
@@ -13706,7 +13702,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             result = result,
@@ -13734,7 +13730,7 @@ abstract class HubCommunication {
         argType1: KClass<T1>,
         argType2: KClass<T2>,
         argType3: KClass<T3>,
-        argType4: KClass<T4>
+        argType4: KClass<T4>,
     ) =
         invoke(
             result = result,
@@ -13756,7 +13752,7 @@ abstract class HubCommunication {
         argType3: KClass<T3>,
         argType4: KClass<T4>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             result = result,
@@ -13780,7 +13776,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             result = result,
@@ -13806,7 +13802,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             result = result,
@@ -13837,7 +13833,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             result = result,
@@ -13871,7 +13867,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             result = result,
@@ -13908,7 +13904,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             result = result,
@@ -13948,7 +13944,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             result = result,
@@ -13991,7 +13987,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             result = result,
@@ -14021,7 +14017,7 @@ abstract class HubCommunication {
         argType2: KClass<T2>,
         argType3: KClass<T3>,
         argType4: KClass<T4>,
-        argType5: KClass<T5>
+        argType5: KClass<T5>,
     ) =
         invoke(
             result = result,
@@ -14051,7 +14047,7 @@ abstract class HubCommunication {
         argType4: KClass<T4>,
         argType5: KClass<T5>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             result = result,
@@ -14083,7 +14079,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             result = result,
@@ -14117,7 +14113,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             result = result,
@@ -14156,7 +14152,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             result = result,
@@ -14198,7 +14194,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             result = result,
@@ -14243,7 +14239,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             result = result,
@@ -14291,7 +14287,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             result = result,
@@ -14342,7 +14338,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             result = result,
@@ -14380,7 +14376,7 @@ abstract class HubCommunication {
         argType3: KClass<T3>,
         argType4: KClass<T4>,
         argType5: KClass<T5>,
-        argType6: KClass<T6>
+        argType6: KClass<T6>,
     ) =
         invoke(
             result = result,
@@ -14413,7 +14409,7 @@ abstract class HubCommunication {
         argType5: KClass<T5>,
         argType6: KClass<T6>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             result = result,
@@ -14448,7 +14444,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             result = result,
@@ -14485,7 +14481,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             result = result,
@@ -14527,7 +14523,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             result = result,
@@ -14572,7 +14568,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             result = result,
@@ -14620,7 +14616,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             result = result,
@@ -14671,7 +14667,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             result = result,
@@ -14725,7 +14721,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             result = result,
@@ -14766,7 +14762,7 @@ abstract class HubCommunication {
         argType4: KClass<T4>,
         argType5: KClass<T5>,
         argType6: KClass<T6>,
-        argType7: KClass<T7>
+        argType7: KClass<T7>,
     ) =
         invoke(
             result = result,
@@ -14802,7 +14798,7 @@ abstract class HubCommunication {
         argType6: KClass<T6>,
         argType7: KClass<T7>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             result = result,
@@ -14840,7 +14836,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             result = result,
@@ -14880,7 +14876,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             result = result,
@@ -14925,7 +14921,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             result = result,
@@ -14973,7 +14969,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             result = result,
@@ -15024,7 +15020,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             result = result,
@@ -15078,7 +15074,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             result = result,
@@ -15135,7 +15131,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             result = result,
@@ -15179,7 +15175,7 @@ abstract class HubCommunication {
         argType5: KClass<T5>,
         argType6: KClass<T6>,
         argType7: KClass<T7>,
-        argType8: KClass<T8>
+        argType8: KClass<T8>,
     ) =
         invoke(
             result = result,
@@ -15218,7 +15214,7 @@ abstract class HubCommunication {
         argType7: KClass<T7>,
         argType8: KClass<T8>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         invoke(
             result = result,
@@ -15259,7 +15255,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         invoke(
             result = result,
@@ -15302,7 +15298,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         invoke(
             result = result,
@@ -15350,7 +15346,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         invoke(
             result = result,
@@ -15401,7 +15397,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         invoke(
             result = result,
@@ -15455,7 +15451,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         invoke(
             result = result,
@@ -15512,7 +15508,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         invoke(
             result = result,
@@ -15572,7 +15568,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         invoke(
             result = result,
@@ -15598,17 +15594,96 @@ abstract class HubCommunication {
                 uploadStream8.map { it.toJson(streamType8) }),
         )
 
-    private fun on(target: String): Flow<HubMessage.Invocation> =
-        receivedInvocations
-            .filter { it.target == target }
+    private suspend fun <T : Any> handleInvocation(
+        message: HubMessage.Invocation,
+        resultType: KClass<T>,
+        callback: suspend () -> T,
+    ) {
+        when (message) {
+            is HubMessage.Invocation.NonBlocking -> {
+                try {
+                    callback()
+                } catch (ex: Exception) {
+                    logger.log(Logger.Level.ERROR, "Invoking client side method '${message.target}' failed: $ex")
+                    return
+                }
+
+                if (resultType != Unit::class) {
+                    // todo should I also print the actual result inside message?
+                    logger.log(
+                        level = Logger.Level.WARNING,
+                        message = "Result was returned for '${message.target}' method but server is not expecting any result.",
+                    )
+                }
+            }
+
+            is HubMessage.Invocation.Blocking -> {
+                val result = try {
+                    callback()
+                } catch (ex: Exception) {
+                    logger.log(
+                        level = Logger.Level.ERROR,
+                        message = "Getting result for blocking invocation of '${message.target}' method has thrown an exception",
+                    )
+
+                    return complete(
+                        HubMessage.Completion.Error(
+                            invocationId = message.invocationId,
+                            error = ex.message.orEmpty(),
+                        )
+                    )
+                }
+
+                complete(
+                    HubMessage.Completion.Resulted(
+                        invocationId = message.invocationId,
+                        result = result.toJson(resultType),
+                    )
+                )
+            }
+        }
+    }
+
+    private fun on(target: String, hasResult: Boolean): Flow<HubMessage.Invocation> {
+        if (hasResult && resultProviderRegistry.contains(target)) {
+            throw IllegalStateException("There can be only one function for returning result on blocking invocation (method: $target)")
+        }
+
+        return receivedInvocations
+            .run {
+                if (!hasResult) {
+                    this
+                        .filter { it.target == target }
+                        .onEach {
+                            if (it is HubMessage.Invocation.Blocking) {
+                                logger.log(
+                                    level = Logger.Level.WARNING,
+                                    message = "There is no result provider for ${it.target} despite server expecting it.",
+                                )
+                                complete(
+                                    HubMessage.Completion.Error(
+                                        invocationId = it.invocationId,
+                                        error = "Client did not provide a result."
+                                    ),
+                                )
+                            }
+                        }
+                } else {
+                    this
+                        .onSubscription { resultProviderRegistry.add(target) }
+                        .onCompletion { resultProviderRegistry.remove(target) }
+                        .filter { it.target == target }
+                }
+            }
             .onEach { logger.log(Logger.Level.INFO, "Received invocation: $it") }
+    }
 
     fun <T1> on(target: String, param1: KClass<T1>): Flow<T1> where T1 : Any =
-        on(target)
+        on(target = target, hasResult = false)
             .map { it.arguments[0].fromJson(param1) }
 
     fun <T1, T2> on(target: String, param1: KClass<T1>, param2: KClass<T2>): Flow<OnResult2<T1, T2>> where T1 : Any, T2 : Any =
-        on(target)
+        on(target = target, hasResult = false)
             .map {
                 OnResult2(
                     it.arguments[0].fromJson(param1),
@@ -15620,9 +15695,9 @@ abstract class HubCommunication {
         target: String,
         param1: KClass<T1>,
         param2: KClass<T2>,
-        param3: KClass<T3>
+        param3: KClass<T3>,
     ): Flow<OnResult3<T1, T2, T3>> where T1 : Any, T2 : Any, T3 : Any =
-        on(target)
+        on(target = target, hasResult = false)
             .map {
                 OnResult3(
                     it.arguments[0].fromJson(param1),
@@ -15636,9 +15711,9 @@ abstract class HubCommunication {
         param1: KClass<T1>,
         param2: KClass<T2>,
         param3: KClass<T3>,
-        param4: KClass<T4>
+        param4: KClass<T4>,
     ): Flow<OnResult4<T1, T2, T3, T4>> where T1 : Any, T2 : Any, T3 : Any, T4 : Any =
-        on(target)
+        on(target = target, hasResult = false)
             .map {
                 OnResult4(
                     it.arguments[0].fromJson(param1),
@@ -15654,9 +15729,9 @@ abstract class HubCommunication {
         param2: KClass<T2>,
         param3: KClass<T3>,
         param4: KClass<T4>,
-        param5: KClass<T5>
+        param5: KClass<T5>,
     ): Flow<OnResult5<T1, T2, T3, T4, T5>> where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any =
-        on(target)
+        on(target = target, hasResult = false)
             .map {
                 OnResult5(
                     it.arguments[0].fromJson(param1),
@@ -15674,9 +15749,9 @@ abstract class HubCommunication {
         param3: KClass<T3>,
         param4: KClass<T4>,
         param5: KClass<T5>,
-        param6: KClass<T6>
+        param6: KClass<T6>,
     ): Flow<OnResult6<T1, T2, T3, T4, T5, T6>> where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any =
-        on(target)
+        on(target = target, hasResult = false)
             .map {
                 OnResult6(
                     it.arguments[0].fromJson(param1),
@@ -15696,9 +15771,9 @@ abstract class HubCommunication {
         param4: KClass<T4>,
         param5: KClass<T5>,
         param6: KClass<T6>,
-        param7: KClass<T7>
+        param7: KClass<T7>,
     ): Flow<OnResult7<T1, T2, T3, T4, T5, T6, T7>> where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any =
-        on(target)
+        on(target = target, hasResult = false)
             .map {
                 OnResult7(
                     it.arguments[0].fromJson(param1),
@@ -15720,10 +15795,10 @@ abstract class HubCommunication {
         param5: KClass<T5>,
         param6: KClass<T6>,
         param7: KClass<T7>,
-        param8: KClass<T8>
+        param8: KClass<T8>,
     ): Flow<OnResult8<T1, T2, T3, T4, T5, T6, T7, T8>> where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 :
     Any =
-        on(target)
+        on(target = target, hasResult = false)
             .map {
                 OnResult8(
                     it.arguments[0].fromJson(param1),
@@ -15737,64 +15812,317 @@ abstract class HubCommunication {
                 )
             }
 
-    suspend fun on(target: String, callback: () -> Unit) {
-        on(target)
+    suspend fun <T> on(target: String, resultType: KClass<T>, callback: suspend () -> T) where T : Any {
+        on(target = target, hasResult = resultType != Unit::class)
             .collect {
-                handleInvocation(it, Unit::class) { callback() }
+                handleInvocation(
+                    message = it,
+                    resultType = resultType,
+                    callback = { callback() },
+                )
             }
     }
 
-    suspend fun <T1> on(target: String, param1: KClass<T1>, callback: (T1) -> Unit) where T1 : Any {
-        on(target)
+    suspend fun <T, T1> on(target: String, resultType: KClass<T>, param1: KClass<T1>, callback: suspend (T1) -> T) where T : Any, T1 : Any {
+        on(target = target, hasResult = resultType != Unit::class)
             .collect {
-                handleInvocation(it, Unit::class) {
-                    callback(it.arguments[0].fromJson(param1))
-                }
+                handleInvocation(
+                    message = it,
+                    resultType = resultType,
+                    callback = { callback(it.arguments[0].fromJson(param1)) },
+                )
             }
     }
 
-    suspend inline fun <reified T1> on(target: String, noinline callback: (T1) -> Unit) where T1: Any =
-        on(target, T1::class, callback)
+    suspend inline fun <reified T, reified T1> on(target: String, noinline callback: suspend (T1) -> T) where T: Any, T1: Any =
+        on(target, T::class, T1::class, callback)
 
-    suspend fun <T1, T2> on(target: String, param1: KClass<T1>, param2: KClass<T2>, callback: (T1, T2) -> Unit) where T1 : Any, T2 : Any {
-        on(target)
+    suspend fun <T, T1, T2> on(
+        target: String,
+        resultType: KClass<T>,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        callback: suspend (T1, T2) -> T,
+    ) where T : Any, T1 : Any, T2 : Any {
+        on(target = target, hasResult = resultType != Unit::class)
             .collect {
-                handleInvocation(it, Unit::class) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                    )
-                }
+                handleInvocation(
+                    message = it,
+                    resultType = resultType,
+                    callback = {
+                        callback(
+                            it.arguments[0].fromJson(param1),
+                            it.arguments[1].fromJson(param2),
+                        )
+                    },
+                )
+            }
+    }
+    
+    suspend inline fun <reified T, reified T1, reified T2> on(
+        target: String,
+        noinline callback: suspend (T1, T2) -> T
+    ) where T: Any, T1: Any, T2: Any =
+        on(target, T::class, T1::class, T2::class, callback)
+
+    suspend fun <T, T1, T2, T3> on(
+        target: String,
+        resultType: KClass<T>,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        param3: KClass<T3>,
+        callback: suspend (T1, T2, T3) -> T,
+    ) where T : Any, T1 : Any, T2 : Any, T3 : Any {
+        on(target = target, hasResult = resultType != Unit::class)
+            .collect {
+                handleInvocation(
+                    message = it,
+                    resultType = resultType,
+                    callback = {
+                        callback(
+                            it.arguments[0].fromJson(param1),
+                            it.arguments[1].fromJson(param2),
+                            it.arguments[2].fromJson(param3),
+                        )
+                    },
+                )
             }
     }
 
-    suspend inline fun <reified T1, reified T2> on(target: String, noinline callback: (T1, T2) -> Unit) where T1: Any, T2: Any =
-        on(target, T1::class, T2::class, callback)
+    suspend inline fun <reified T, reified T1, reified T2, reified T3> on(
+        target: String,
+        noinline callback: suspend (T1, T2, T3) -> T
+    ) where T: Any, T1: Any, T2: Any, T3: Any =
+        on(target, T::class, T1::class, T2::class, T3::class, callback)
+
+    suspend fun <T, T1, T2, T3, T4> on(
+        target: String,
+        resultType: KClass<T>,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        param3: KClass<T3>,
+        param4: KClass<T4>,
+        callback: suspend (T1, T2, T3, T4) -> T,
+    ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any {
+        on(target = target, hasResult = resultType != Unit::class)
+            .collect {
+                handleInvocation(
+                    message = it,
+                    resultType = resultType,
+                    callback = {
+                        callback(
+                            it.arguments[0].fromJson(param1),
+                            it.arguments[1].fromJson(param2),
+                            it.arguments[2].fromJson(param3),
+                            it.arguments[3].fromJson(param4),
+                        )
+                    },
+                )
+            }
+    }
+    
+    suspend inline fun <reified T, reified T1, reified T2, reified T3, reified T4> on(
+        target: String,
+        noinline callback: suspend (T1, T2, T3, T4) -> T
+    ) where T: Any, T1: Any, T2: Any, T3: Any, T4: Any =
+        on(target, T::class, T1::class, T2::class, T3::class, T4::class, callback)
+
+    suspend fun <T, T1, T2, T3, T4, T5> on(
+        target: String,
+        resultType: KClass<T>,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        param3: KClass<T3>,
+        param4: KClass<T4>,
+        param5: KClass<T5>,
+        callback: suspend (T1, T2, T3, T4, T5) -> T,
+    ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any {
+        on(target = target, hasResult = resultType != Unit::class)
+            .collect {
+                handleInvocation(
+                    message = it,
+                    resultType = resultType,
+                    callback = {
+                        callback(
+                            it.arguments[0].fromJson(param1),
+                            it.arguments[1].fromJson(param2),
+                            it.arguments[2].fromJson(param3),
+                            it.arguments[3].fromJson(param4),
+                            it.arguments[4].fromJson(param5),
+                        )
+                    },
+                )
+            }
+    }
+
+    suspend inline fun <reified T, reified T1, reified T2, reified T3, reified T4, reified T5> on(
+        target: String,
+        noinline callback: suspend (T1, T2, T3, T4, T5) -> T
+    ) where T: Any, T1: Any, T2: Any, T3: Any, T4: Any, T5: Any =
+        on(target, T::class, T1::class, T2::class, T3::class, T4::class, T5::class, callback)
+
+    suspend fun <T, T1, T2, T3, T4, T5, T6> on(
+        target: String,
+        resultType: KClass<T>,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        param3: KClass<T3>,
+        param4: KClass<T4>,
+        param5: KClass<T5>,
+        param6: KClass<T6>,
+        callback: suspend (T1, T2, T3, T4, T5, T6) -> T,
+    ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any {
+        on(target = target, hasResult = resultType != Unit::class)
+            .collect {
+                handleInvocation(
+                    message = it,
+                    resultType = resultType,
+                    callback = {
+                        callback(
+                            it.arguments[0].fromJson(param1),
+                            it.arguments[1].fromJson(param2),
+                            it.arguments[2].fromJson(param3),
+                            it.arguments[3].fromJson(param4),
+                            it.arguments[4].fromJson(param5),
+                            it.arguments[5].fromJson(param6),
+                        )
+                    },
+                )
+            }
+    }
+
+    suspend inline fun <reified T, reified T1, reified T2, reified T3, reified T4, reified T5, reified T6> on(
+        target: String,
+        noinline callback: suspend (T1, T2, T3, T4, T5, T6) -> T
+    ) where T: Any, T1: Any, T2: Any, T3: Any, T4: Any, T5: Any, T6: Any =
+        on(target, T::class, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, callback)
+
+    suspend fun <T, T1, T2, T3, T4, T5, T6, T7> on(
+        target: String,
+        resultType: KClass<T>,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        param3: KClass<T3>,
+        param4: KClass<T4>,
+        param5: KClass<T5>,
+        param6: KClass<T6>,
+        param7: KClass<T7>,
+        callback: suspend (T1, T2, T3, T4, T5, T6, T7) -> T,
+    ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any {
+        on(target = target, hasResult = resultType != Unit::class)
+            .collect {
+                handleInvocation(
+                    message = it,
+                    resultType = resultType,
+                    callback = {
+                        callback(
+                            it.arguments[0].fromJson(param1),
+                            it.arguments[1].fromJson(param2),
+                            it.arguments[2].fromJson(param3),
+                            it.arguments[3].fromJson(param4),
+                            it.arguments[4].fromJson(param5),
+                            it.arguments[5].fromJson(param6),
+                            it.arguments[6].fromJson(param7),
+                        )
+                    },
+                )
+            }
+    }
+
+    suspend inline fun <reified T, reified T1, reified T2, reified T3, reified T4, reified T5, reified T6, reified T7> on(
+        target: String,
+        noinline callback: suspend (T1, T2, T3, T4, T5, T6, T7) -> T
+    ) where T: Any, T1: Any, T2: Any, T3: Any, T4: Any, T5: Any, T6: Any, T7: Any =
+        on(target, T::class, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, T7::class, callback)
+
+    suspend fun <T, T1, T2, T3, T4, T5, T6, T7, T8> on(
+        target: String,
+        resultType: KClass<T>,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        param3: KClass<T3>,
+        param4: KClass<T4>,
+        param5: KClass<T5>,
+        param6: KClass<T6>,
+        param7: KClass<T7>,
+        param8: KClass<T8>,
+        callback: suspend (T1, T2, T3, T4, T5, T6, T7, T8) -> T,
+    ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 : Any {
+        on(target = target, hasResult = resultType != Unit::class)
+            .collect {
+                handleInvocation(
+                    message = it,
+                    resultType = resultType,
+                    callback = {
+                        callback(
+                            it.arguments[0].fromJson(param1),
+                            it.arguments[1].fromJson(param2),
+                            it.arguments[2].fromJson(param3),
+                            it.arguments[3].fromJson(param4),
+                            it.arguments[4].fromJson(param5),
+                            it.arguments[5].fromJson(param6),
+                            it.arguments[6].fromJson(param7),
+                            it.arguments[7].fromJson(param8),
+                        )
+                    },
+                )
+            }
+    }
+
+    suspend inline fun <reified T, reified T1, reified T2, reified T3, reified T4, reified T5, reified T6, reified T7, reified T8> on(
+        target: String,
+        noinline callback: suspend (T1, T2, T3, T4, T5, T6, T7, T8) -> T
+    ) where T: Any, T1: Any, T2: Any, T3: Any, T4: Any, T5: Any, T6: Any, T7: Any, T8: Any =
+        on(target, T::class, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, T7::class, T8::class, callback)
+
+    suspend fun on(target: String, callback: suspend () -> Unit) {
+        on(
+            target = target,
+            resultType = Unit::class,
+            callback = callback,
+        )
+    }
+
+    suspend fun <T1> on(target: String, param1: KClass<T1>, callback: suspend (T1) -> Unit) where T1 : Any {
+        on(
+            target = target,
+            resultType = Unit::class,
+            param1 = param1,
+            callback = callback,
+        )
+    }
+
+    suspend fun <T1, T2> on(
+        target: String,
+        param1: KClass<T1>,
+        param2: KClass<T2>,
+        callback: suspend (T1, T2) -> Unit,
+    ) where T1 : Any, T2 : Any {
+        on(
+            target = target,
+            resultType = Unit::class,
+            param1 = param1,
+            param2 = param2,
+            callback = callback,
+        )
+    }
 
     suspend fun <T1, T2, T3> on(
         target: String,
         param1: KClass<T1>,
         param2: KClass<T2>,
         param3: KClass<T3>,
-        callback: (T1, T2, T3) -> Unit
+        callback: suspend (T1, T2, T3) -> Unit,
     ) where T1 : Any, T2 : Any, T3 : Any {
-        on(target)
-            .collect {
-                handleInvocation(it, Unit::class) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                        it.arguments[2].fromJson(param3),
-                    )
-                }
-            }
+        on(
+            target = target,
+            resultType = Unit::class,
+            param1 = param1,
+            param2 = param2,
+            param3 = param3,
+            callback = callback,
+        )
     }
-    
-    suspend inline fun <reified T1, reified T2, reified T3> on(
-        target: String,
-        noinline callback: (T1, T2, T3) -> Unit
-    ) where T1: Any, T2: Any, T3: Any =
-        on(target, T1::class, T2::class, T3::class, callback)
 
     suspend fun <T1, T2, T3, T4> on(
         target: String,
@@ -15802,26 +16130,18 @@ abstract class HubCommunication {
         param2: KClass<T2>,
         param3: KClass<T3>,
         param4: KClass<T4>,
-        callback: (T1, T2, T3, T4) -> Unit
+        callback: suspend (T1, T2, T3, T4) -> Unit,
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any {
-        on(target)
-            .collect {
-                handleInvocation(it, Unit::class) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                        it.arguments[2].fromJson(param3),
-                        it.arguments[3].fromJson(param4),
-                    )
-                }
-            }
+        on(
+            target = target,
+            resultType = Unit::class,
+            param1 = param1,
+            param2 = param2,
+            param3 = param3,
+            param4 = param4,
+            callback = callback,
+        )
     }
-
-    suspend inline fun <reified T1, reified T2, reified T3, reified T4> on(
-        target: String,
-        noinline callback: (T1, T2, T3, T4) -> Unit
-    ) where T1: Any, T2: Any, T3: Any, T4: Any =
-        on(target, T1::class, T2::class, T3::class, T4::class, callback)
 
     suspend fun <T1, T2, T3, T4, T5> on(
         target: String,
@@ -15830,27 +16150,19 @@ abstract class HubCommunication {
         param3: KClass<T3>,
         param4: KClass<T4>,
         param5: KClass<T5>,
-        callback: (T1, T2, T3, T4, T5) -> Unit
+        callback: suspend (T1, T2, T3, T4, T5) -> Unit,
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any {
-        on(target)
-            .collect {
-                handleInvocation(it, Unit::class) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                        it.arguments[2].fromJson(param3),
-                        it.arguments[3].fromJson(param4),
-                        it.arguments[4].fromJson(param5),
-                    )
-                }
-            }
+        on(
+            target = target,
+            resultType = Unit::class,
+            param1 = param1,
+            param2 = param2,
+            param3 = param3,
+            param4 = param4,
+            param5 = param5,
+            callback = callback,
+        )
     }
-
-    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5> on(
-        target: String,
-        noinline callback: (T1, T2, T3, T4, T5) -> Unit
-    ) where T1: Any, T2: Any, T3: Any, T4: Any, T5: Any =
-        on(target, T1::class, T2::class, T3::class, T4::class, T5::class, callback)
 
     suspend fun <T1, T2, T3, T4, T5, T6> on(
         target: String,
@@ -15860,28 +16172,20 @@ abstract class HubCommunication {
         param4: KClass<T4>,
         param5: KClass<T5>,
         param6: KClass<T6>,
-        callback: (T1, T2, T3, T4, T5, T6) -> Unit
+        callback: suspend (T1, T2, T3, T4, T5, T6) -> Unit,
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any {
-        on(target)
-            .collect {
-                handleInvocation(it, Unit::class) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                        it.arguments[2].fromJson(param3),
-                        it.arguments[3].fromJson(param4),
-                        it.arguments[4].fromJson(param5),
-                        it.arguments[5].fromJson(param6),
-                    )
-                }
-            }
+        on(
+            target = target,
+            resultType = Unit::class,
+            param1 = param1,
+            param2 = param2,
+            param3 = param3,
+            param4 = param4,
+            param5 = param5,
+            param6 = param6,
+            callback = callback,
+        )
     }
-
-    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified T6> on(
-        target: String,
-        noinline callback: (T1, T2, T3, T4, T5, T6) -> Unit
-    ) where T1: Any, T2: Any, T3: Any, T4: Any, T5: Any, T6: Any =
-        on(target, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, callback)
 
     suspend fun <T1, T2, T3, T4, T5, T6, T7> on(
         target: String,
@@ -15892,29 +16196,21 @@ abstract class HubCommunication {
         param5: KClass<T5>,
         param6: KClass<T6>,
         param7: KClass<T7>,
-        callback: (T1, T2, T3, T4, T5, T6, T7) -> Unit
+        callback: suspend (T1, T2, T3, T4, T5, T6, T7) -> Unit,
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any {
-        on(target)
-            .collect {
-                handleInvocation(it, Unit::class) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                        it.arguments[2].fromJson(param3),
-                        it.arguments[3].fromJson(param4),
-                        it.arguments[4].fromJson(param5),
-                        it.arguments[5].fromJson(param6),
-                        it.arguments[6].fromJson(param7),
-                    )
-                }
-            }
+        on(
+            target = target,
+            resultType = Unit::class,
+            param1 = param1,
+            param2 = param2,
+            param3 = param3,
+            param4 = param4,
+            param5 = param5,
+            param6 = param6,
+            param7 = param7,
+            callback = callback,
+        )
     }
-
-    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified T6, reified T7> on(
-        target: String,
-        noinline callback: (T1, T2, T3, T4, T5, T6, T7) -> Unit
-    ) where T1: Any, T2: Any, T3: Any, T4: Any, T5: Any, T6: Any, T7: Any =
-        on(target, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, T7::class, callback)
 
     suspend fun <T1, T2, T3, T4, T5, T6, T7, T8> on(
         target: String,
@@ -15926,295 +16222,22 @@ abstract class HubCommunication {
         param6: KClass<T6>,
         param7: KClass<T7>,
         param8: KClass<T8>,
-        callback: (T1, T2, T3, T4, T5, T6, T7, T8) -> Unit
+        callback: suspend (T1, T2, T3, T4, T5, T6, T7, T8) -> Unit,
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 : Any {
-        on(target)
-            .collect {
-                handleInvocation(it, Unit::class) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                        it.arguments[2].fromJson(param3),
-                        it.arguments[3].fromJson(param4),
-                        it.arguments[4].fromJson(param5),
-                        it.arguments[5].fromJson(param6),
-                        it.arguments[6].fromJson(param7),
-                        it.arguments[7].fromJson(param8),
-                    )
-                }
-            }
+        on(
+            target = target,
+            resultType = Unit::class,
+            param1 = param1,
+            param2 = param2,
+            param3 = param3,
+            param4 = param4,
+            param5 = param5,
+            param6 = param6,
+            param7 = param7,
+            param8 = param8,
+            callback = callback,
+        )
     }
-
-    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified T6, reified T7, reified T8> on(
-        target: String,
-        noinline callback: (T1, T2, T3, T4, T5, T6, T7, T8) -> Unit
-    ) where T1: Any, T2: Any, T3: Any, T4: Any, T5: Any, T6: Any, T7: Any, T8: Any =
-        on(target, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, T7::class, T8::class, callback)
-
-    private fun onWithResult(target: String): Flow<HubMessage.Invocation> {
-        if (subscribersWithResult[target] == true) {
-            throw RuntimeException("'$target' already has a value returning handler. Multiple return values are not supported.")
-        }
-
-        return receivedInvocations
-            .onSubscription {
-                subscribersWithResult[target] = true
-            }
-            .onCompletion {
-                subscribersWithResult[target] = false
-            }
-            .filter { it.target == target }
-            .onEach { logger.log(Logger.Level.INFO, "Received invocation: $it") }
-    }
-
-    suspend fun <TResult> onWithResult(
-        target: String,
-        resultType: KClass<TResult>,
-        callback: suspend () -> TResult
-    ) where TResult: Any {
-        onWithResult(target)
-            .collect {
-                handleInvocation(it, resultType) {
-                    callback()
-                }
-            }
-    }
-
-    suspend inline fun <reified TResult> onWithResult(
-        target: String,
-        noinline callback: suspend () -> TResult
-    ) where TResult: Any =
-        onWithResult(target, TResult::class, callback)
-
-    suspend fun <T1, TResult> onWithResult(
-        target: String,
-        param1: KClass<T1>,
-        resultType: KClass<TResult>,
-        callback: suspend (T1) -> TResult
-    ) where T1 : Any, TResult: Any {
-        onWithResult(target)
-            .collect {
-                handleInvocation(it, resultType) {
-                    callback(it.arguments[0].fromJson(param1))
-                }
-            }
-    }
-
-    suspend inline fun <reified T1, reified TResult> onWithResult(
-        target: String,
-        noinline callback: suspend (T1) -> TResult
-    ) where T1 : Any, TResult: Any =
-        onWithResult(target, T1::class, TResult::class, callback)
-
-    suspend fun <T1, T2, TResult> onWithResult(
-        target: String,
-        param1: KClass<T1>,
-        param2: KClass<T2>,
-        resultType: KClass<TResult>,
-        callback: suspend (T1, T2) -> TResult
-    ) where T1 : Any, T2 : Any, TResult: Any {
-        onWithResult(target)
-            .collect {
-                handleInvocation(it, resultType) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2)
-                    )
-                }
-            }
-    }
-
-    suspend inline fun <reified T1, reified T2, reified TResult> onWithResult(
-        target: String,
-        noinline callback: suspend (T1, T2) -> TResult
-    ) where T1 : Any, T2 : Any, TResult: Any =
-        onWithResult(target, T1::class, T2::class, TResult::class, callback)
-
-    suspend fun <T1, T2, T3, TResult> onWithResult(
-        target: String,
-        param1: KClass<T1>,
-        param2: KClass<T2>,
-        param3: KClass<T3>,
-        resultType: KClass<TResult>,
-        callback: suspend (T1, T2, T3) -> TResult
-    ) where T1 : Any, T2 : Any, T3 : Any, TResult: Any {
-        onWithResult(target)
-            .collect {
-                handleInvocation(it, resultType) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                        it.arguments[2].fromJson(param3)
-                    )
-                }
-            }
-    }
-
-    suspend inline fun <reified T1, reified T2, reified T3, reified TResult> onWithResult(
-        target: String,
-        noinline callback: suspend (T1, T2, T3) -> TResult
-    ) where T1 : Any, T2 : Any, T3 : Any, TResult: Any =
-        onWithResult(target, T1::class, T2::class, T3::class, TResult::class, callback)
-
-    suspend fun <T1, T2, T3, T4, TResult> onWithResult(
-        target: String,
-        param1: KClass<T1>,
-        param2: KClass<T2>,
-        param3: KClass<T3>,
-        param4: KClass<T4>,
-        resultType: KClass<TResult>,
-        callback: suspend (T1, T2, T3, T4) -> TResult
-    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, TResult: Any {
-        onWithResult(target)
-            .collect {
-                handleInvocation(it, resultType) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                        it.arguments[2].fromJson(param3),
-                        it.arguments[3].fromJson(param4)
-                    )
-                }
-            }
-    }
-
-    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified TResult> onWithResult(
-        target: String,
-        noinline callback: suspend (T1, T2, T3, T4) -> TResult
-    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, TResult: Any =
-        onWithResult(target, T1::class, T2::class, T3::class, T4::class, TResult::class, callback)
-
-    suspend fun <T1, T2, T3, T4, T5, TResult> onWithResult(
-        target: String,
-        param1: KClass<T1>,
-        param2: KClass<T2>,
-        param3: KClass<T3>,
-        param4: KClass<T4>,
-        param5: KClass<T5>,
-        resultType: KClass<TResult>,
-        callback: suspend (T1, T2, T3, T4, T5) -> TResult
-    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, TResult: Any {
-        onWithResult(target)
-            .collect {
-                handleInvocation(it, resultType) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                        it.arguments[2].fromJson(param3),
-                        it.arguments[3].fromJson(param4),
-                        it.arguments[4].fromJson(param5)
-                    )
-                }
-            }
-    }
-
-    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified TResult> onWithResult(
-        target: String,
-        noinline callback: suspend (T1, T2, T3, T4, T5) -> TResult
-    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, TResult: Any =
-        onWithResult(target, T1::class, T2::class, T3::class, T4::class, T5::class, TResult::class, callback)
-
-    suspend fun <T1, T2, T3, T4, T5, T6, TResult> onWithResult(
-        target: String,
-        param1: KClass<T1>,
-        param2: KClass<T2>,
-        param3: KClass<T3>,
-        param4: KClass<T4>,
-        param5: KClass<T5>,
-        param6: KClass<T6>,
-        resultType: KClass<TResult>,
-        callback: suspend (T1, T2, T3, T4, T5, T6) -> TResult
-    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, TResult: Any {
-        onWithResult(target)
-            .collect {
-                handleInvocation(it, resultType) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                        it.arguments[2].fromJson(param3),
-                        it.arguments[3].fromJson(param4),
-                        it.arguments[4].fromJson(param5),
-                        it.arguments[5].fromJson(param6)
-                    )
-                }
-            }
-    }
-
-    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified T6, reified TResult> onWithResult(
-        target: String,
-        noinline callback: suspend (T1, T2, T3, T4, T5, T6) -> TResult
-    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, TResult: Any =
-        onWithResult(target, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, TResult::class, callback)
-
-    suspend fun <T1, T2, T3, T4, T5, T6, T7, TResult> onWithResult(
-        target: String,
-        param1: KClass<T1>,
-        param2: KClass<T2>,
-        param3: KClass<T3>,
-        param4: KClass<T4>,
-        param5: KClass<T5>,
-        param6: KClass<T6>,
-        param7: KClass<T7>,
-        resultType: KClass<TResult>,
-        callback: suspend (T1, T2, T3, T4, T5, T6, T7) -> TResult
-    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, TResult: Any {
-        onWithResult(target)
-            .collect {
-                handleInvocation(it, resultType) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                        it.arguments[2].fromJson(param3),
-                        it.arguments[3].fromJson(param4),
-                        it.arguments[4].fromJson(param5),
-                        it.arguments[5].fromJson(param6),
-                        it.arguments[6].fromJson(param7)
-                    )
-                }
-            }
-    }
-
-    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified T6, reified T7, reified TResult> onWithResult(
-        target: String,
-        noinline callback: suspend (T1, T2, T3, T4, T5, T6, T7) -> TResult
-    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, TResult: Any =
-        onWithResult(target, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, T7::class, TResult::class, callback)
-
-    suspend fun <T1, T2, T3, T4, T5, T6, T7, T8, TResult> onWithResult(
-        target: String,
-        param1: KClass<T1>,
-        param2: KClass<T2>,
-        param3: KClass<T3>,
-        param4: KClass<T4>,
-        param5: KClass<T5>,
-        param6: KClass<T6>,
-        param7: KClass<T7>,
-        param8: KClass<T8>,
-        resultType: KClass<TResult>,
-        callback: suspend (T1, T2, T3, T4, T5, T6, T7, T8) -> TResult
-    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 : Any, TResult: Any {
-        onWithResult(target)
-            .collect {
-                handleInvocation(it, resultType) {
-                    callback(
-                        it.arguments[0].fromJson(param1),
-                        it.arguments[1].fromJson(param2),
-                        it.arguments[2].fromJson(param3),
-                        it.arguments[3].fromJson(param4),
-                        it.arguments[4].fromJson(param5),
-                        it.arguments[5].fromJson(param6),
-                        it.arguments[6].fromJson(param7),
-                        it.arguments[7].fromJson(param8)
-                    )
-                }
-            }
-    }
-
-    suspend inline fun <reified T1, reified T2, reified T3, reified T4, reified T5, reified T6, reified T7, reified T8, reified TResult> onWithResult(
-        target: String,
-        noinline callback: suspend (T1, T2, T3, T4, T5, T6, T7, T8) -> TResult
-    ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 : Any, TResult: Any =
-        onWithResult(target, T1::class, T2::class, T3::class, T4::class, T5::class, T6::class, T7::class, T8::class, TResult::class, callback)
 
     fun <A : Any> stream(itemType: KClass<A>, method: String): Flow<A> =
         stream(
@@ -16238,7 +16261,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -16255,7 +16278,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -16277,7 +16300,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -16302,7 +16325,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -16330,7 +16353,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -16361,7 +16384,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -16395,7 +16418,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -16426,7 +16449,7 @@ abstract class HubCommunication {
         arg1: T1,
         argType1: KClass<T1>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -16443,7 +16466,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -16462,7 +16485,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -16486,7 +16509,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -16513,7 +16536,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -16543,7 +16566,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -16576,7 +16599,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -16612,7 +16635,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -16635,7 +16658,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         argType1: KClass<T1>,
-        argType2: KClass<T2>
+        argType2: KClass<T2>,
     ) =
         stream(
             itemType = itemType,
@@ -16652,7 +16675,7 @@ abstract class HubCommunication {
         argType1: KClass<T1>,
         argType2: KClass<T2>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -16671,7 +16694,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -16692,7 +16715,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -16718,7 +16741,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -16747,7 +16770,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -16779,7 +16802,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -16814,7 +16837,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -16852,7 +16875,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -16877,7 +16900,7 @@ abstract class HubCommunication {
         arg3: T3,
         argType1: KClass<T1>,
         argType2: KClass<T2>,
-        argType3: KClass<T3>
+        argType3: KClass<T3>,
     ) =
         stream(
             itemType = itemType,
@@ -16896,7 +16919,7 @@ abstract class HubCommunication {
         argType2: KClass<T2>,
         argType3: KClass<T3>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -16917,7 +16940,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -16940,7 +16963,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -16968,7 +16991,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -16999,7 +17022,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -17033,7 +17056,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -17070,7 +17093,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -17110,7 +17133,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -17137,7 +17160,7 @@ abstract class HubCommunication {
         argType1: KClass<T1>,
         argType2: KClass<T2>,
         argType3: KClass<T3>,
-        argType4: KClass<T4>
+        argType4: KClass<T4>,
     ) =
         stream(
             itemType = itemType,
@@ -17158,7 +17181,7 @@ abstract class HubCommunication {
         argType3: KClass<T3>,
         argType4: KClass<T4>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -17181,7 +17204,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -17206,7 +17229,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -17236,7 +17259,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -17269,7 +17292,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -17305,7 +17328,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -17344,7 +17367,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -17386,7 +17409,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -17415,7 +17438,7 @@ abstract class HubCommunication {
         argType2: KClass<T2>,
         argType3: KClass<T3>,
         argType4: KClass<T4>,
-        argType5: KClass<T5>
+        argType5: KClass<T5>,
     ) =
         stream(
             itemType = itemType,
@@ -17444,7 +17467,7 @@ abstract class HubCommunication {
         argType4: KClass<T4>,
         argType5: KClass<T5>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -17475,7 +17498,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -17508,7 +17531,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -17546,7 +17569,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -17587,7 +17610,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -17631,7 +17654,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -17678,7 +17701,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -17728,7 +17751,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -17765,7 +17788,7 @@ abstract class HubCommunication {
         argType3: KClass<T3>,
         argType4: KClass<T4>,
         argType5: KClass<T5>,
-        argType6: KClass<T6>
+        argType6: KClass<T6>,
     ) =
         stream(
             itemType = itemType,
@@ -17797,7 +17820,7 @@ abstract class HubCommunication {
         argType5: KClass<T5>,
         argType6: KClass<T6>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -17831,7 +17854,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -17867,7 +17890,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -17908,7 +17931,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -17952,7 +17975,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -17999,7 +18022,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -18049,7 +18072,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -18102,7 +18125,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -18142,7 +18165,7 @@ abstract class HubCommunication {
         argType4: KClass<T4>,
         argType5: KClass<T5>,
         argType6: KClass<T6>,
-        argType7: KClass<T7>
+        argType7: KClass<T7>,
     ) =
         stream(
             itemType = itemType,
@@ -18177,7 +18200,7 @@ abstract class HubCommunication {
         argType6: KClass<T6>,
         argType7: KClass<T7>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -18214,7 +18237,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -18253,7 +18276,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -18297,7 +18320,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -18344,7 +18367,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -18394,7 +18417,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -18447,7 +18470,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -18503,7 +18526,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -18546,7 +18569,7 @@ abstract class HubCommunication {
         argType5: KClass<T5>,
         argType6: KClass<T6>,
         argType7: KClass<T7>,
-        argType8: KClass<T8>
+        argType8: KClass<T8>,
     ) =
         stream(
             itemType = itemType,
@@ -18584,7 +18607,7 @@ abstract class HubCommunication {
         argType7: KClass<T7>,
         argType8: KClass<T8>,
         uploadStream1: Flow<F1>,
-        streamType1: KClass<F1>
+        streamType1: KClass<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -18624,7 +18647,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         streamType1: KClass<F1>,
-        streamType2: KClass<F2>
+        streamType2: KClass<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -18666,7 +18689,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
-        streamType3: KClass<F3>
+        streamType3: KClass<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -18713,7 +18736,7 @@ abstract class HubCommunication {
         streamType1: KClass<F1>,
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
-        streamType4: KClass<F4>
+        streamType4: KClass<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -18763,7 +18786,7 @@ abstract class HubCommunication {
         streamType2: KClass<F2>,
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
-        streamType5: KClass<F5>
+        streamType5: KClass<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -18816,7 +18839,7 @@ abstract class HubCommunication {
         streamType3: KClass<F3>,
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
-        streamType6: KClass<F6>
+        streamType6: KClass<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -18872,7 +18895,7 @@ abstract class HubCommunication {
         streamType4: KClass<F4>,
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
-        streamType7: KClass<F7>
+        streamType7: KClass<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -18931,7 +18954,7 @@ abstract class HubCommunication {
         streamType5: KClass<F5>,
         streamType6: KClass<F6>,
         streamType7: KClass<F7>,
-        streamType8: KClass<F8>
+        streamType8: KClass<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -18969,7 +18992,7 @@ abstract class HubCommunication {
         itemType: KClass<A>,
         method: String,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -18985,7 +19008,7 @@ abstract class HubCommunication {
         method: String,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -19004,7 +19027,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -19026,7 +19049,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -19051,7 +19074,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -19079,7 +19102,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -19110,7 +19133,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -19145,7 +19168,7 @@ abstract class HubCommunication {
         itemType: KClass<A>,
         method: String,
         arg1: T1,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -19161,7 +19184,7 @@ abstract class HubCommunication {
         method: String,
         arg1: T1,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -19180,7 +19203,7 @@ abstract class HubCommunication {
         arg1: T1,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -19202,7 +19225,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -19227,7 +19250,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -19255,7 +19278,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -19286,7 +19309,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -19320,7 +19343,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -19360,7 +19383,7 @@ abstract class HubCommunication {
         method: String,
         arg1: T1,
         arg2: T2,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -19379,7 +19402,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -19401,7 +19424,7 @@ abstract class HubCommunication {
         arg2: T2,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -19426,7 +19449,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -19454,7 +19477,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -19485,7 +19508,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -19519,7 +19542,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -19556,7 +19579,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -19588,7 +19611,7 @@ abstract class HubCommunication {
         method: String,
         arg1: T1,
         arg2: T2,
-        arg3: T3
+        arg3: T3,
     ) =
         stream(
             itemType = itemType,
@@ -19607,7 +19630,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         arg3: T3,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -19629,7 +19652,7 @@ abstract class HubCommunication {
         arg2: T2,
         arg3: T3,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -19654,7 +19677,7 @@ abstract class HubCommunication {
         arg3: T3,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -19682,7 +19705,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -19713,7 +19736,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -19747,7 +19770,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -19784,7 +19807,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -19824,7 +19847,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -19859,7 +19882,7 @@ abstract class HubCommunication {
         arg1: T1,
         arg2: T2,
         arg3: T3,
-        arg4: T4
+        arg4: T4,
     ) =
         stream(
             itemType = itemType,
@@ -19881,7 +19904,7 @@ abstract class HubCommunication {
         arg2: T2,
         arg3: T3,
         arg4: T4,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -19906,7 +19929,7 @@ abstract class HubCommunication {
         arg3: T3,
         arg4: T4,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -19934,7 +19957,7 @@ abstract class HubCommunication {
         arg4: T4,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -19965,7 +19988,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -19999,7 +20022,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -20036,7 +20059,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -20076,7 +20099,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -20119,7 +20142,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -20157,7 +20180,7 @@ abstract class HubCommunication {
         arg2: T2,
         arg3: T3,
         arg4: T4,
-        arg5: T5
+        arg5: T5,
     ) =
         stream(
             itemType = itemType,
@@ -20182,7 +20205,7 @@ abstract class HubCommunication {
         arg3: T3,
         arg4: T4,
         arg5: T5,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -20210,7 +20233,7 @@ abstract class HubCommunication {
         arg4: T4,
         arg5: T5,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -20241,7 +20264,7 @@ abstract class HubCommunication {
         arg5: T5,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -20275,7 +20298,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -20312,7 +20335,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -20352,7 +20375,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -20395,7 +20418,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -20441,7 +20464,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -20482,7 +20505,7 @@ abstract class HubCommunication {
         arg3: T3,
         arg4: T4,
         arg5: T5,
-        arg6: T6
+        arg6: T6,
     ) =
         stream(
             itemType = itemType,
@@ -20510,7 +20533,7 @@ abstract class HubCommunication {
         arg4: T4,
         arg5: T5,
         arg6: T6,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -20541,7 +20564,7 @@ abstract class HubCommunication {
         arg5: T5,
         arg6: T6,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -20575,7 +20598,7 @@ abstract class HubCommunication {
         arg6: T6,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -20612,7 +20635,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -20652,7 +20675,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -20695,7 +20718,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -20741,7 +20764,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -20790,7 +20813,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -20834,7 +20857,7 @@ abstract class HubCommunication {
         arg4: T4,
         arg5: T5,
         arg6: T6,
-        arg7: T7
+        arg7: T7,
     ) =
         stream(
             itemType = itemType,
@@ -20865,7 +20888,7 @@ abstract class HubCommunication {
         arg5: T5,
         arg6: T6,
         arg7: T7,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -20899,7 +20922,7 @@ abstract class HubCommunication {
         arg6: T6,
         arg7: T7,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -20936,7 +20959,7 @@ abstract class HubCommunication {
         arg7: T7,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -20976,7 +20999,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -21019,7 +21042,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -21065,7 +21088,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -21114,7 +21137,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -21166,7 +21189,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         stream(
             itemType = itemType,
@@ -21213,7 +21236,7 @@ abstract class HubCommunication {
         arg5: T5,
         arg6: T6,
         arg7: T7,
-        arg8: T8
+        arg8: T8,
     ) =
         stream(
             itemType = itemType,
@@ -21247,7 +21270,7 @@ abstract class HubCommunication {
         arg6: T6,
         arg7: T7,
         arg8: T8,
-        uploadStream1: Flow<F1>
+        uploadStream1: Flow<F1>,
     ) =
         stream(
             itemType = itemType,
@@ -21284,7 +21307,7 @@ abstract class HubCommunication {
         arg7: T7,
         arg8: T8,
         uploadStream1: Flow<F1>,
-        uploadStream2: Flow<F2>
+        uploadStream2: Flow<F2>,
     ) =
         stream(
             itemType = itemType,
@@ -21324,7 +21347,7 @@ abstract class HubCommunication {
         arg8: T8,
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
-        uploadStream3: Flow<F3>
+        uploadStream3: Flow<F3>,
     ) =
         stream(
             itemType = itemType,
@@ -21367,7 +21390,7 @@ abstract class HubCommunication {
         uploadStream1: Flow<F1>,
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
-        uploadStream4: Flow<F4>
+        uploadStream4: Flow<F4>,
     ) =
         stream(
             itemType = itemType,
@@ -21413,7 +21436,7 @@ abstract class HubCommunication {
         uploadStream2: Flow<F2>,
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
-        uploadStream5: Flow<F5>
+        uploadStream5: Flow<F5>,
     ) =
         stream(
             itemType = itemType,
@@ -21462,7 +21485,7 @@ abstract class HubCommunication {
         uploadStream3: Flow<F3>,
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
-        uploadStream6: Flow<F6>
+        uploadStream6: Flow<F6>,
     ) =
         stream(
             itemType = itemType,
@@ -21514,7 +21537,7 @@ abstract class HubCommunication {
         uploadStream4: Flow<F4>,
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
-        uploadStream7: Flow<F7>
+        uploadStream7: Flow<F7>,
     ) =
         stream(
             itemType = itemType,
@@ -21569,7 +21592,7 @@ abstract class HubCommunication {
         uploadStream5: Flow<F5>,
         uploadStream6: Flow<F6>,
         uploadStream7: Flow<F7>,
-        uploadStream8: Flow<F8>
+        uploadStream8: Flow<F8>,
     ) =
         stream(
             itemType = itemType,

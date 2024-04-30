@@ -121,7 +121,7 @@ class HubConnection private constructor(
         httpClient = httpClient ?: HttpClient().config {
             install(WebSockets)
             install(HttpTimeout)
-            install(ContentNegotiation) { json(Json) }
+            install(ContentNegotiation) { json(Json(json) { ignoreUnknownKeys = true }) }
         },
         transportEnum = transportEnum,
         handshakeResponseTimeout = if (handshakeResponseTimeout.isPositive()) handshakeResponseTimeout else 15.seconds,
@@ -248,9 +248,18 @@ class HubConnection private constructor(
             is NegotiateResponse.Redirect -> {
                 if (negotiateAttempts >= MAX_NEGOTIATE_ATTEMPTS) throw RuntimeException("Negotiate redirection limit exceeded.")
 
-                return startNegotiate(response.url, negotiateAttempts + 1, headers.map { (key, value) ->
-                    key to (if (key == "Authorization") "Bearer " + response.accessToken else value)
-                }.toMap())
+                return startNegotiate(
+                    response.url + "&access_token=${response.accessToken}",
+                    negotiateAttempts + 1,
+                    headers.map {
+                            (
+                                key,
+                                value,
+                            ),
+                        ->
+                        key to (if (key == "Authorization") "Bearer " + response.accessToken else value)
+                    }.toMap()
+                )
             }
 
             is NegotiateResponse.Success -> {
@@ -391,13 +400,26 @@ class HubConnection private constructor(
 
         messages.forEach { message ->
             when (message) {
-                is HubMessage.Close ->
+                is HubMessage.Close -> {
                     if (message.allowReconnect && automaticReconnect !is AutomaticReconnect.Inactive) reconnect(message.error)
                     else
                         if (message.allowReconnect && automaticReconnect !is AutomaticReconnect.Inactive) reconnect(message.error)
                         else stop(message.error)
+                }
 
-                is HubMessage.Invocation -> processReceivedInvocation(message)
+                is HubMessage.Invocation -> {
+                    if (message is HubMessage.Invocation.Blocking && !resultProviderRegistry.contains(message.target)) {
+                        logger.log(Logger.Level.ERROR, "Failed to find a value returning handler for ${message.target} method. Sending error to server.")
+
+                        complete(HubMessage.Completion.Error(
+                            invocationId = message.invocationId,
+                            error = "Client did not provide a result."),
+                        )
+                    }
+
+                    receivedInvocations.emit(message)
+                }
+                is HubMessage.StreamInvocation -> Unit // not supported yet
                 is HubMessage.Ping -> Unit
                 is HubMessage.CancelInvocation -> Unit // this should not happen according to standard
                 is HubMessage.StreamItem -> receivedStreamItems.emit(message)
@@ -406,50 +428,11 @@ class HubConnection private constructor(
         }
     }
 
-    private suspend fun processReceivedInvocation(message: HubMessage.Invocation) {
-        if (message is HubMessage.Invocation.Blocking && message.invocationId != null && subscribersWithResult[message.target] != true) {
-            logger.log(Logger.Level.ERROR, "Failed to find a value returning handler for ${message.target} method. Sending error to server.")
-
-            val resultMessage = HubMessage.Completion.Error(invocationId = message.invocationId, error = "Client did not provide a result.")
-            sendHubMessage(resultMessage)
-        }
-
-        receivedInvocations.emit(message)
-    }
-
     @OptIn(InternalSerializationApi::class)
     override fun <T : Any> T.toJson(kClass: KClass<T>): JsonElement = json.encodeToJsonElement(kClass.serializer(), this)
 
     @OptIn(InternalSerializationApi::class)
     override fun <T : Any> JsonElement.fromJson(kClass: KClass<T>): T = json.decodeFromJsonElement(kClass.serializer(), this)
-
-    override suspend fun <TResult> handleInvocation(
-        message: HubMessage.Invocation,
-        resultType: KClass<TResult>,
-        callback: suspend () -> TResult
-    ) where TResult : Any {
-        val invocationId = if (message is HubMessage.Invocation.Blocking) message.invocationId else null
-        var resultMessage: HubMessage.Completion? = null
-
-        try {
-            val result = callback()
-            if (invocationId != null) {
-                resultMessage = HubMessage.Completion.Resulted(invocationId = invocationId, result = result.toJson(resultType))
-            }
-        } catch (ex: Exception) {
-            logger.log(Logger.Level.ERROR, "Invoking client side method '${message.target}' failed: $ex")
-            if (invocationId != null) {
-                resultMessage = HubMessage.Completion.Error(invocationId = invocationId, error = ex.message.orEmpty())
-            }
-        }
-
-        if (resultMessage != null) {
-            connectedCheck("handleInvocation")
-            sendHubMessage(resultMessage)
-        } else if (resultType != Unit::class) {
-            logger.log(Logger.Level.ERROR, "Result given for '${message.target}' method but server is not expecting a result.")
-        }
-    }
 
     override fun send(method: String, args: List<JsonElement>, uploadStreams: List<Flow<JsonElement>>) {
         connectedCheck("send")
@@ -462,6 +445,11 @@ class HubConnection private constructor(
         )
         sendHubMessage(invocationMessage)
         launchStreams(streamIds, uploadStreams)
+    }
+
+    override fun complete(message: HubMessage.Completion) {
+        connectedCheck("complete")
+        sendHubMessage(message)
     }
 
     private fun launchStreams(streamIds: List<String>, uploadStreams: List<Flow<JsonElement>>) {
@@ -516,7 +504,7 @@ class HubConnection private constructor(
         val invocationId = UUID.randomUUID()
 
         val streamIds = uploadStreams.map { UUID.randomUUID() }
-        val invocationMessage = HubMessage.Invocation.Streaming(
+        val invocationMessage = HubMessage.StreamInvocation(
             target = method,
             arguments = args,
             invocationId = invocationId,
