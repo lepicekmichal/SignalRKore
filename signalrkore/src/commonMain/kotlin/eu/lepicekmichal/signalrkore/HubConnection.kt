@@ -249,7 +249,7 @@ class HubConnection private constructor(
                 if (negotiateAttempts >= MAX_NEGOTIATE_ATTEMPTS) throw RuntimeException("Negotiate redirection limit exceeded.")
 
                 return startNegotiate(
-                    response.url + "&access_token=${response.accessToken}",
+                    response.url,
                     negotiateAttempts + 1,
                     headers.map {
                             (
