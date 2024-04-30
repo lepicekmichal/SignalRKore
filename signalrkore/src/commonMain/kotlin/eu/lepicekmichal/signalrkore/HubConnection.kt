@@ -18,7 +18,6 @@ import io.ktor.utils.io.core.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
@@ -341,17 +340,17 @@ class HubConnection private constructor(
                 delay(timeMillis = delayTime ?: break)
 
                 try {
-                    logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting - #${retryCount} attempt")
+                    logger.log(Logger.Severity.INFO, "[$baseUrl] Reconnecting - #${retryCount} attempt", null)
                     start(reconnectionAttempt = true)
                 } catch (ex: Exception) {
-                    logger.log(Logger.Level.INFO, "[$baseUrl] Reconnecting error: $ex")
+                    logger.log(Logger.Severity.INFO, "[$baseUrl] Reconnecting error", ex)
                     continue
                 }
                 break
             }
 
             if (_connectionState.value != HubConnectionState.CONNECTED) {
-                logger.log(Logger.Level.INFO, "[$baseUrl] Reconnection unsuccessful, terminating")
+                logger.log(Logger.Severity.INFO, "[$baseUrl] Reconnection unsuccessful, terminating", null)
 
                 _connectionState.value = HubConnectionState.DISCONNECTED
 
@@ -367,7 +366,7 @@ class HubConnection private constructor(
 
         _connectionState.value = HubConnectionState.DISCONNECTED
 
-        logger.log(Logger.Level.INFO, "[$baseUrl] ${errorMessage ?: "Stopping connection"}")
+        logger.log(Logger.Severity.INFO, "[$baseUrl] ${errorMessage ?: "Stopping connection"}", null)
 
         if (::transport.isInitialized) transport.stop()
         job.cancelChildren()
@@ -375,14 +374,14 @@ class HubConnection private constructor(
 
     private fun sendHubMessage(message: HubMessage) {
         if (connectionState.value != HubConnectionState.CONNECTED) {
-            logger.log(Logger.Level.ERROR, "Trying to send and message while the connection is not active. ($message)")
+            logger.log(Logger.Severity.ERROR, "Trying to send and message while the connection is not active. ($message)", null)
             return
         }
 
         val serializedMessage: ByteArray = protocol.writeMessage(message)
         scope.launch {
             if (::transport.isInitialized) transport.send(serializedMessage)
-            logger.log(Logger.Level.INFO, "Sent hub data: $message")
+            logger.log(Logger.Severity.INFO, "Sent hub data: $message", null)
             resetKeepAlive()
         }
     }
@@ -451,7 +450,7 @@ class HubConnection private constructor(
         args = args,
         uploadStreams = uploadStreams,
         processSimple = { },
-        processResult = { logger.log(Logger.Level.INFO, "Result of a completion message has been ignored: ${it.result}") },
+        processResult = { logger.log(Logger.Severity.INFO, "Result of a completion message has been ignored: ${it.result}", null) },
     )
 
     override suspend fun <T : Any> invoke(

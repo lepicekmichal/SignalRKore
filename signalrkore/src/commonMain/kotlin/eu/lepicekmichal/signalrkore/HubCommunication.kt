@@ -15605,8 +15605,9 @@ abstract class HubCommunication {
                 if (resultType != Unit::class) {
                     // todo should I also print the actual result inside message?
                     logger.log(
-                        level = Logger.Level.WARNING,
+                        severity = Logger.Severity.WARNING,
                         message = "Result was returned for '${message.target}' method but server is not expecting any result.",
+                        cause = null,
                     )
                 }
             }
@@ -15616,8 +15617,9 @@ abstract class HubCommunication {
                     callback()
                 } catch (ex: Exception) {
                     logger.log(
-                        level = Logger.Level.ERROR,
+                        severity = Logger.Severity.ERROR,
                         message = "Getting result for blocking invocation of '${message.target}' method has thrown an exception",
+                        cause = ex,
                     )
 
                     return complete(
@@ -15649,8 +15651,9 @@ abstract class HubCommunication {
                     this.onEach {
                         if (it is HubMessage.Invocation.Blocking) {
                             logger.log(
-                                level = Logger.Level.WARNING,
+                                severity = Logger.Severity.WARNING,
                                 message = "There is no result provider for ${it.target} despite server expecting it.",
+                                cause = null,
                             )
                             complete(
                                 HubMessage.Completion.Error(
@@ -15667,7 +15670,7 @@ abstract class HubCommunication {
                 }
             }
             .filter { it.target == target }
-            .onEach { logger.log(Logger.Level.INFO, "Received invocation: $it") }
+            .onEach { logger.log(Logger.Severity.INFO, "Received invocation: $it", null) }
     }
 
     fun <T1> on(target: String, param1: KClass<T1>): Flow<T1> where T1 : Any =

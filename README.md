@@ -1,4 +1,4 @@
-# SignalR Kore
+# SignalRKore
 
 [![Maven Central](https://img.shields.io/maven-central/v/eu.lepicekmichal.signalrkore/signalrkore)](https://mvnrepository.com/artifact/eu.lepicekmichal.signalrkore)
 [![Kotlin](https://img.shields.io/badge/kotlin-1.9.23-blue.svg?logo=kotlin)](http://kotlinlang.org)
@@ -8,12 +8,12 @@
 ![badge-jvm](http://img.shields.io/badge/platform-jvm-DB413D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-lightgray?style=flat)
 
-SignalR Kore is a client library connecting to ASP.NET Core server for real-time functionality. Enables server-side code to push content to
+SignalRKore is a client library connecting to ASP.NET Core server for real-time functionality. Enables server-side code to push content to
 clients and vice-versa. Instantly.
 
 ## Why should you use **this** library
 
-|                            | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) |            SignalR Kore             |
+|                            | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) |             SignalRKore             |
 |:---------------------------|:--------------------------------------------------------------------------------------------:|:-----------------------------------:|
 | Written in                 |                                             Java                                             |               Kotlin                |
 | KMM / KMP                  |                                   :heavy_multiplication_x:                                   |          Android, JVM, iOS          |
@@ -32,7 +32,7 @@ clients and vice-versa. Instantly.
 _* Except for SSE which uses only OkHttp at the moment_   
 _** Only for android and jvm for now_
 
-> Even though this library has many advantages over official client library, SignalR Kore would not exist without it as implementation
+> Even though this library has many advantages over official client library, SignalRKore would not exist without it as implementation
 > of the SignalR standard is much inspired in it. Therefore I thank the authors from Microsoft.
 
 ## Install
@@ -216,8 +216,8 @@ class MyHubProtocol : HubProtocol {
 Just decide what to do with the message
 
 ```kotlin
-logger = Logger {
-    Napier.v("SignalR Kore is saying: $it")
+logger = Logger { severity, msg, cause ->
+    Napier.v("SignalRKore is saying: $ms")
 }
 ```
 
