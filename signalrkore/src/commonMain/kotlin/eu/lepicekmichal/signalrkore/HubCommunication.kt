@@ -10,6 +10,12 @@ import kotlinx.coroutines.flow.onSubscription
 import kotlinx.serialization.json.JsonElement
 import kotlin.reflect.KClass
 
+suspend inline fun <reified T> HubCommunication.on(target: String, noinline callback: suspend () -> T) where T: Any =
+    on(target, T::class, callback)
+
+suspend inline fun <reified T> HubCommunication.on(target: String, noinline callback: () -> T) where T: Any =
+    on(target, T::class, callback)
+
 abstract class HubCommunication {
 
     protected abstract val receivedInvocations: SharedFlow<HubMessage.Invocation>
