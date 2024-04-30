@@ -409,7 +409,7 @@ class HubConnection private constructor(
 
                 is HubMessage.Invocation -> {
                     if (message is HubMessage.Invocation.Blocking && !resultProviderRegistry.contains(message.target)) {
-                        logger.log(Logger.Level.ERROR, "Failed to find a value returning handler for ${message.target} method. Sending error to server.")
+                        logger.log(Logger.Level.ERROR, "There is no result provider for '${message.target}' despite server expecting it.")
 
                         complete(HubMessage.Completion.Error(
                             invocationId = message.invocationId,

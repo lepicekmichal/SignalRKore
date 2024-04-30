@@ -15651,30 +15651,14 @@ abstract class HubCommunication {
 
         return receivedInvocations
             .run {
-                if (!hasResult) {
-                    this
-                        .filter { it.target == target }
-                        .onEach {
-                            if (it is HubMessage.Invocation.Blocking) {
-                                logger.log(
-                                    level = Logger.Level.WARNING,
-                                    message = "There is no result provider for ${it.target} despite server expecting it.",
-                                )
-                                complete(
-                                    HubMessage.Completion.Error(
-                                        invocationId = it.invocationId,
-                                        error = "Client did not provide a result."
-                                    ),
-                                )
-                            }
-                        }
-                } else {
-                    this
+                when (hasResult) {
+                    true -> this
                         .onSubscription { resultProviderRegistry.add(target) }
                         .onCompletion { resultProviderRegistry.remove(target) }
-                        .filter { it.target == target }
+                    else -> this
                 }
             }
+            .filter { it.target == target }
             .onEach { logger.log(Logger.Level.INFO, "Received invocation: $it") }
     }
 
