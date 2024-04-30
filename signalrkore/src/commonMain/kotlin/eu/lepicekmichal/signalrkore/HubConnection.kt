@@ -69,7 +69,7 @@ class HubConnection private constructor(
 ) : HubCommunication() {
 
     private val job = SupervisorJob()
-    private val scope = CoroutineScope(job + Dispatchers.IO)
+    override val scope = CoroutineScope(job + Dispatchers.IO)
 
     private val pingReset = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val pingTicker = pingReset
@@ -319,7 +319,6 @@ class HubConnection private constructor(
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     private suspend fun reconnect(errorMessage: String? = null) {
         stop(errorMessage)
 

@@ -1,5 +1,6 @@
 package eu.lepicekmichal.signalrkore
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.filter
@@ -11,6 +12,8 @@ import kotlinx.serialization.json.JsonElement
 import kotlin.reflect.KClass
 
 abstract class HubCommunication {
+
+    protected abstract val scope: CoroutineScope
 
     protected abstract val receivedInvocations: SharedFlow<HubMessage.Invocation>
 
@@ -15594,7 +15597,7 @@ abstract class HubCommunication {
                 uploadStream8.map { it.toJson(streamType8) }),
         )
 
-    private fun <T : Any> handleInvocation(
+    private suspend inline fun <T : Any> handleInvocation(
         message: HubMessage.Invocation,
         resultType: KClass<T>,
         callback: () -> T,
@@ -15818,9 +15821,9 @@ abstract class HubCommunication {
             }
     }
 
-    suspend fun <T, T1> on(target: String, resultType: KClass<T>, param1: KClass<T1>, callback: (T1) -> T) where T : Any, T1 : Any {
+    fun <T, T1> on(target: String, resultType: KClass<T>, param1: KClass<T1>, callback: suspend (T1) -> T) where T : Any, T1 : Any {
         on(target = target, hasResult = resultType != Unit::class)
-            .collect {
+            .collectInScope(scope) {
                 handleInvocation(
                     message = it,
                     resultType = resultType,
@@ -15829,15 +15832,15 @@ abstract class HubCommunication {
             }
     }
 
-    suspend fun <T, T1, T2> on(
+    fun <T, T1, T2> on(
         target: String,
         resultType: KClass<T>,
         param1: KClass<T1>,
         param2: KClass<T2>,
-        callback: (T1, T2) -> T,
+        callback: suspend (T1, T2) -> T,
     ) where T : Any, T1 : Any, T2 : Any {
         on(target = target, hasResult = resultType != Unit::class)
-            .collect {
+            .collectInScope(scope) {
                 handleInvocation(
                     message = it,
                     resultType = resultType,
@@ -15851,16 +15854,16 @@ abstract class HubCommunication {
             }
     }
 
-    suspend fun <T, T1, T2, T3> on(
+    fun <T, T1, T2, T3> on(
         target: String,
         resultType: KClass<T>,
         param1: KClass<T1>,
         param2: KClass<T2>,
         param3: KClass<T3>,
-        callback: (T1, T2, T3) -> T,
+        callback: suspend (T1, T2, T3) -> T,
     ) where T : Any, T1 : Any, T2 : Any, T3 : Any {
         on(target = target, hasResult = resultType != Unit::class)
-            .collect {
+            .collectInScope(scope) {
                 handleInvocation(
                     message = it,
                     resultType = resultType,
@@ -15875,17 +15878,17 @@ abstract class HubCommunication {
             }
     }
 
-    suspend fun <T, T1, T2, T3, T4> on(
+    fun <T, T1, T2, T3, T4> on(
         target: String,
         resultType: KClass<T>,
         param1: KClass<T1>,
         param2: KClass<T2>,
         param3: KClass<T3>,
         param4: KClass<T4>,
-        callback: (T1, T2, T3, T4) -> T,
+        callback: suspend (T1, T2, T3, T4) -> T,
     ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any {
         on(target = target, hasResult = resultType != Unit::class)
-            .collect {
+            .collectInScope(scope) {
                 handleInvocation(
                     message = it,
                     resultType = resultType,
@@ -15901,7 +15904,7 @@ abstract class HubCommunication {
             }
     }
 
-    suspend fun <T, T1, T2, T3, T4, T5> on(
+    fun <T, T1, T2, T3, T4, T5> on(
         target: String,
         resultType: KClass<T>,
         param1: KClass<T1>,
@@ -15909,10 +15912,10 @@ abstract class HubCommunication {
         param3: KClass<T3>,
         param4: KClass<T4>,
         param5: KClass<T5>,
-        callback: (T1, T2, T3, T4, T5) -> T,
+        callback: suspend (T1, T2, T3, T4, T5) -> T,
     ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any {
         on(target = target, hasResult = resultType != Unit::class)
-            .collect {
+            .collectInScope(scope) {
                 handleInvocation(
                     message = it,
                     resultType = resultType,
@@ -15929,7 +15932,7 @@ abstract class HubCommunication {
             }
     }
 
-    suspend fun <T, T1, T2, T3, T4, T5, T6> on(
+    fun <T, T1, T2, T3, T4, T5, T6> on(
         target: String,
         resultType: KClass<T>,
         param1: KClass<T1>,
@@ -15938,10 +15941,10 @@ abstract class HubCommunication {
         param4: KClass<T4>,
         param5: KClass<T5>,
         param6: KClass<T6>,
-        callback: (T1, T2, T3, T4, T5, T6) -> T,
+        callback: suspend (T1, T2, T3, T4, T5, T6) -> T,
     ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any {
         on(target = target, hasResult = resultType != Unit::class)
-            .collect {
+            .collectInScope(scope) {
                 handleInvocation(
                     message = it,
                     resultType = resultType,
@@ -15959,7 +15962,7 @@ abstract class HubCommunication {
             }
     }
 
-    suspend fun <T, T1, T2, T3, T4, T5, T6, T7> on(
+    fun <T, T1, T2, T3, T4, T5, T6, T7> on(
         target: String,
         resultType: KClass<T>,
         param1: KClass<T1>,
@@ -15969,10 +15972,10 @@ abstract class HubCommunication {
         param5: KClass<T5>,
         param6: KClass<T6>,
         param7: KClass<T7>,
-        callback: (T1, T2, T3, T4, T5, T6, T7) -> T,
+        callback: suspend (T1, T2, T3, T4, T5, T6, T7) -> T,
     ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any {
         on(target = target, hasResult = resultType != Unit::class)
-            .collect {
+            .collectInScope(scope) {
                 handleInvocation(
                     message = it,
                     resultType = resultType,
@@ -15991,7 +15994,7 @@ abstract class HubCommunication {
             }
     }
 
-    suspend fun <T, T1, T2, T3, T4, T5, T6, T7, T8> on(
+    fun <T, T1, T2, T3, T4, T5, T6, T7, T8> on(
         target: String,
         resultType: KClass<T>,
         param1: KClass<T1>,
@@ -16002,10 +16005,10 @@ abstract class HubCommunication {
         param6: KClass<T6>,
         param7: KClass<T7>,
         param8: KClass<T8>,
-        callback: (T1, T2, T3, T4, T5, T6, T7, T8) -> T,
+        callback: suspend (T1, T2, T3, T4, T5, T6, T7, T8) -> T,
     ) where T : Any, T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 : Any {
         on(target = target, hasResult = resultType != Unit::class)
-            .collect {
+            .collectInScope(scope) {
                 handleInvocation(
                     message = it,
                     resultType = resultType,
@@ -16025,7 +16028,7 @@ abstract class HubCommunication {
             }
     }
 
-    suspend fun <T1> on(target: String, param1: KClass<T1>, callback: (T1) -> Unit) where T1 : Any {
+    fun <T1> on(target: String, param1: KClass<T1>, callback: suspend (T1) -> Unit) where T1 : Any {
         on(
             target = target,
             resultType = Unit::class,
@@ -16034,11 +16037,11 @@ abstract class HubCommunication {
         )
     }
 
-    suspend fun <T1, T2> on(
+    fun <T1, T2> on(
         target: String,
         param1: KClass<T1>,
         param2: KClass<T2>,
-        callback: (T1, T2) -> Unit,
+        callback: suspend (T1, T2) -> Unit,
     ) where T1 : Any, T2 : Any {
         on(
             target = target,
@@ -16049,12 +16052,12 @@ abstract class HubCommunication {
         )
     }
 
-    suspend fun <T1, T2, T3> on(
+    fun <T1, T2, T3> on(
         target: String,
         param1: KClass<T1>,
         param2: KClass<T2>,
         param3: KClass<T3>,
-        callback: (T1, T2, T3) -> Unit,
+        callback: suspend (T1, T2, T3) -> Unit,
     ) where T1 : Any, T2 : Any, T3 : Any {
         on(
             target = target,
@@ -16066,13 +16069,13 @@ abstract class HubCommunication {
         )
     }
 
-    suspend fun <T1, T2, T3, T4> on(
+    fun <T1, T2, T3, T4> on(
         target: String,
         param1: KClass<T1>,
         param2: KClass<T2>,
         param3: KClass<T3>,
         param4: KClass<T4>,
-        callback: (T1, T2, T3, T4) -> Unit,
+        callback: suspend (T1, T2, T3, T4) -> Unit,
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any {
         on(
             target = target,
@@ -16085,14 +16088,14 @@ abstract class HubCommunication {
         )
     }
 
-    suspend fun <T1, T2, T3, T4, T5> on(
+    fun <T1, T2, T3, T4, T5> on(
         target: String,
         param1: KClass<T1>,
         param2: KClass<T2>,
         param3: KClass<T3>,
         param4: KClass<T4>,
         param5: KClass<T5>,
-        callback: (T1, T2, T3, T4, T5) -> Unit,
+        callback: suspend (T1, T2, T3, T4, T5) -> Unit,
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any {
         on(
             target = target,
@@ -16106,7 +16109,7 @@ abstract class HubCommunication {
         )
     }
 
-    suspend fun <T1, T2, T3, T4, T5, T6> on(
+    fun <T1, T2, T3, T4, T5, T6> on(
         target: String,
         param1: KClass<T1>,
         param2: KClass<T2>,
@@ -16114,7 +16117,7 @@ abstract class HubCommunication {
         param4: KClass<T4>,
         param5: KClass<T5>,
         param6: KClass<T6>,
-        callback: (T1, T2, T3, T4, T5, T6) -> Unit,
+        callback: suspend (T1, T2, T3, T4, T5, T6) -> Unit,
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any {
         on(
             target = target,
@@ -16129,7 +16132,7 @@ abstract class HubCommunication {
         )
     }
 
-    suspend fun <T1, T2, T3, T4, T5, T6, T7> on(
+    fun <T1, T2, T3, T4, T5, T6, T7> on(
         target: String,
         param1: KClass<T1>,
         param2: KClass<T2>,
@@ -16138,7 +16141,7 @@ abstract class HubCommunication {
         param5: KClass<T5>,
         param6: KClass<T6>,
         param7: KClass<T7>,
-        callback: (T1, T2, T3, T4, T5, T6, T7) -> Unit,
+        callback: suspend (T1, T2, T3, T4, T5, T6, T7) -> Unit,
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any {
         on(
             target = target,
@@ -16154,7 +16157,7 @@ abstract class HubCommunication {
         )
     }
 
-    suspend fun <T1, T2, T3, T4, T5, T6, T7, T8> on(
+    fun <T1, T2, T3, T4, T5, T6, T7, T8> on(
         target: String,
         param1: KClass<T1>,
         param2: KClass<T2>,
@@ -16164,7 +16167,7 @@ abstract class HubCommunication {
         param6: KClass<T6>,
         param7: KClass<T7>,
         param8: KClass<T8>,
-        callback: (T1, T2, T3, T4, T5, T6, T7, T8) -> Unit,
+        callback: suspend (T1, T2, T3, T4, T5, T6, T7, T8) -> Unit,
     ) where T1 : Any, T2 : Any, T3 : Any, T4 : Any, T5 : Any, T6 : Any, T7 : Any, T8 : Any {
         on(
             target = target,
