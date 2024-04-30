@@ -1,3 +1,5 @@
+import org.gradle.internal.os.OperatingSystem
+
 plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
@@ -25,13 +27,15 @@ kotlin {
         }
     }
 
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "SignalRKore"
-            isStatic = true
+    if (OperatingSystem.current().isMacOsX) {
+        listOf(
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach { iosTarget ->
+            iosTarget.binaries.framework {
+                baseName = "SignalRKore"
+                isStatic = true
+            }
         }
     }
 
@@ -73,8 +77,10 @@ kotlin {
             dependsOn(jvmMain)
         }
 
-        iosMain.dependencies {
+        if (OperatingSystem.current().isMacOsX) {
+            iosMain.dependencies {
 
+            }
         }
     }
 }
