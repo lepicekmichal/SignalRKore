@@ -196,7 +196,15 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
         collectInScope(scope) { message ->
             when (message) {
                 is HubMessage.Invocation.NonBlocking -> {
-                    callback(message)
+                    try {
+                        callback(message)
+                    } catch (ex: Exception) {
+                        logger.log(
+                            severity = Logger.Severity.ERROR,
+                            message = "Getting result for non-blocking invocation of '${message.target}' method has thrown an exception",
+                            cause = ex,
+                        )
+                    }
                     if (resultType != Unit::class) {
                         // todo should I also print the actual result inside message?
                         logger.log(
@@ -240,32 +248,33 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
         if (hasResult && resultProviderRegistry.contains(target)) {
             throw IllegalStateException("There can be only one function for returning result on blocking invocation (method: $target)")
         }
-
         return receivedInvocations
             .run {
-                if (!hasResult) {
-                    this.onEach {
-                        if (it is HubMessage.Invocation.Blocking) {
-                            logger.log(
-                                severity = Logger.Severity.WARNING,
-                                message = "There is no result provider for ${it.target} despite server expecting it.",
-                                cause = null,
-                            )
-                            complete(
-                                HubMessage.Completion.Error(
-                                    invocationId = it.invocationId,
-                                    error = "Client did not provide a result."
-                                ),
-                            )
-                        }
-                    }
-                } else {
-                    this
-                        .onSubscription { resultProviderRegistry.add(target) }
-                        .onCompletion { resultProviderRegistry.remove(target) }
-                }
+                if (!hasResult) this
+                else this
+                    .onSubscription { resultProviderRegistry.add(target) }
+                    .onCompletion { resultProviderRegistry.remove(target) }
             }
             .filter { it.target == target }
+            .run {
+                if (hasResult) this
+                else this.onEach {
+                    if (it is HubMessage.Invocation.Blocking) {
+                        logger.log(
+                            severity = Logger.Severity.WARNING,
+                            message = "There is no result provider for ${it.target} despite server expecting it.",
+                            cause = null,
+                        )
+
+                        complete(
+                            HubMessage.Completion.Error(
+                                invocationId = it.invocationId,
+                                error = "Client did not provide a result."
+                            ),
+                        )
+                    }
+                }
+            }
             .onEach { logger.log(Logger.Severity.INFO, "Received invocation: $it", null) }
     }
 }
