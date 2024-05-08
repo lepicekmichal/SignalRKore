@@ -1,3 +1,4 @@
+import eu.lepicekmichal.signalrkore.HubCommunicationTask
 import org.gradle.internal.os.OperatingSystem
 
 plugins {
@@ -51,6 +52,8 @@ kotlin {
         }
 
         val commonMain by getting {
+            kotlin.srcDir(project.layout.buildDirectory.dir("generated/kotlin").get().asFile)
+
             dependencies {
                 implementation("org.jetbrains.kotlin:kotlin-stdlib-common:1.9.23")
                 implementation("io.ktor:ktor-client-core:2.3.10")
@@ -110,4 +113,12 @@ mavenPublishing {
             javadocJar = com.vanniktech.maven.publish.JavadocJar.Empty(),
         )
     )
+}
+
+tasks.register<HubCommunicationTask>("HubCommunicationGeneration") {
+    this.group = "build"
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    dependsOn += tasks["HubCommunicationGeneration"]
 }

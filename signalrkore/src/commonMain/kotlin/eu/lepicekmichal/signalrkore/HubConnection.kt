@@ -19,39 +19,27 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.serializer
-import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.ExperimentalTime
 import kotlin.time.TimeSource
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -64,9 +52,9 @@ class HubConnection private constructor(
     private val headers: Map<String, String>,
     private val skipNegotiate: Boolean,
     private val automaticReconnect: AutomaticReconnect,
-    private val json: Json,
     override val logger: Logger,
-) : HubCommunication() {
+    json: Json,
+) : HubCommunicationLink(json) {
 
     private val job = SupervisorJob()
     override val scope = CoroutineScope(job + Dispatchers.IO)
@@ -94,8 +82,8 @@ class HubConnection private constructor(
         }
 
     override val receivedInvocations = MutableSharedFlow<HubMessage.Invocation>()
-    private val receivedStreamItems = MutableSharedFlow<HubMessage.StreamItem>()
-    private val receivedCompletions = MutableSharedFlow<HubMessage.Completion>()
+    override val receivedStreamItems = MutableSharedFlow<HubMessage.StreamItem>()
+    override val receivedCompletions = MutableSharedFlow<HubMessage.Completion>()
 
     private val _connectionState: MutableStateFlow<HubConnectionState> = MutableStateFlow(HubConnectionState.DISCONNECTED)
     val connectionState: StateFlow<HubConnectionState> = _connectionState.asStateFlow()
@@ -371,7 +359,7 @@ class HubConnection private constructor(
         job.cancelChildren()
     }
 
-    private fun sendHubMessage(message: HubMessage) {
+    override fun sendHubMessage(message: HubMessage) {
         if (connectionState.value != HubConnectionState.CONNECTED) {
             logger.log(Logger.Severity.ERROR, "Trying to send and message while the connection is not active. ($message)", null)
             return
@@ -408,157 +396,6 @@ class HubConnection private constructor(
         }
     }
 
-    @OptIn(InternalSerializationApi::class)
-    override fun <T : Any> T.toJson(kClass: KClass<T>): JsonElement = json.encodeToJsonElement(kClass.serializer(), this)
-
-    @OptIn(InternalSerializationApi::class)
-    override fun <T : Any> JsonElement.fromJson(kClass: KClass<T>): T = json.decodeFromJsonElement(kClass.serializer(), this)
-
-    override fun send(method: String, args: List<JsonElement>, uploadStreams: List<Flow<JsonElement>>) {
-        connectedCheck("send")
-
-        val streamIds = uploadStreams.map { UUID.randomUUID() }
-        val invocationMessage = HubMessage.Invocation.NonBlocking(
-            target = method,
-            arguments = args,
-            streamIds = streamIds.takeIf { it.isNotEmpty() }
-        )
-        sendHubMessage(invocationMessage)
-        launchStreams(streamIds, uploadStreams)
-    }
-
-    override fun complete(message: HubMessage.Completion) {
-        connectedCheck("complete")
-        sendHubMessage(message)
-    }
-
-    private fun launchStreams(streamIds: List<String>, uploadStreams: List<Flow<JsonElement>>) {
-        streamIds.zip(uploadStreams) { id, stream ->
-            scope.launch {
-                stream
-                    .map<_, HubMessage> { HubMessage.StreamItem(invocationId = id, item = it) }
-                    .onCompletion { throwable -> throwable?.let { throw it } ?: emit(HubMessage.Completion.Simple(invocationId = id)) }
-                    .catch { emit(HubMessage.Completion.Error(invocationId = id, error = it.message.orEmpty())) }
-                    .collect { sendHubMessage(it) }
-            }
-        }
-    }
-
-    override suspend fun invoke(method: String, args: List<JsonElement>, uploadStreams: List<Flow<JsonElement>>) = internalInvoke(
-        method = method,
-        args = args,
-        uploadStreams = uploadStreams,
-        processSimple = { },
-        processResult = { logger.log(Logger.Severity.INFO, "Result of a completion message has been ignored: ${it.result}", null) },
-    )
-
-    override suspend fun <T : Any> invoke(
-        result: KClass<T>,
-        method: String,
-        args: List<JsonElement>,
-        uploadStreams: List<Flow<JsonElement>>,
-    ): T = internalInvoke(
-        method = method,
-        args = args,
-        uploadStreams = uploadStreams,
-        processSimple = { throw RuntimeException("The completion message has no result, but one is expected") },
-        processResult = {
-            try {
-                it.result.fromJson(result)
-            } catch (ex: SerializationException) {
-                throw RuntimeException("Completion result could not be parsed as ${result.simpleName}: ${it.result}")
-            } catch (ex: IllegalArgumentException) {
-                throw RuntimeException("${result.simpleName} could not be initialized from the completion result: ${it.result}")
-            }
-        },
-    )
-
-    override fun <T : Any> stream(
-        itemType: KClass<T>,
-        method: String,
-        args: List<JsonElement>,
-        uploadStreams: List<Flow<JsonElement>>,
-    ): Flow<T> {
-        connectedCheck("stream")
-
-        val invocationId = UUID.randomUUID()
-
-        val streamIds = uploadStreams.map { UUID.randomUUID() }
-        val invocationMessage = HubMessage.StreamInvocation(
-            target = method,
-            arguments = args,
-            invocationId = invocationId,
-            streamIds = streamIds.takeIf { it.isNotEmpty() },
-        )
-
-        return callbackFlow {
-            var completionReceived = false
-            val complete = {
-                completionReceived = true
-                cancel()
-            }
-
-            launch {
-                receivedStreamItems
-                    .filter { it.invocationId == invocationId }
-                    .map {
-                        try {
-                            it.item.fromJson(itemType)
-                        } catch (ex: SerializationException) {
-                            throw RuntimeException("Completion result could not be parsed as ${itemType.simpleName}: ${it.item}")
-                        } catch (ex: IllegalArgumentException) {
-                            throw RuntimeException("${itemType.simpleName} could not be initialized from the completion result: ${it.item}")
-                        }
-                    }
-                    .collect { if (!isClosedForSend) send(it) }
-            }
-
-            launch {
-                when (val completion = receivedCompletions.filter { it.invocationId == invocationId }.first()) {
-                    is HubMessage.Completion.Error -> throw RuntimeException(completion.error)
-                    is HubMessage.Completion.Resulted -> throw IllegalStateException("According to standard, stream cannot be finished with result")
-                    is HubMessage.Completion.Simple -> complete()
-                }
-            }
-
-            awaitClose {
-                if (!completionReceived) {
-                    sendHubMessage(HubMessage.CancelInvocation(invocationId))
-                }
-            }
-        }.onStart {
-            sendHubMessage(invocationMessage)
-            launchStreams(streamIds, uploadStreams)
-        }
-    }
-
-    private suspend fun <T : Any> internalInvoke(
-        method: String,
-        args: List<JsonElement>,
-        uploadStreams: List<Flow<JsonElement>>,
-        processSimple: (HubMessage.Completion.Simple) -> T,
-        processResult: (HubMessage.Completion.Resulted) -> T,
-    ): T {
-        connectedCheck("invoke")
-
-        val invocationId = UUID.randomUUID()
-
-        val streamIds = uploadStreams.map { UUID.randomUUID() }
-        val invocationMessage = HubMessage.Invocation.Blocking(
-            target = method,
-            arguments = args,
-            invocationId = invocationId,
-            streamIds = streamIds.takeIf { it.isNotEmpty() })
-        sendHubMessage(invocationMessage)
-        launchStreams(streamIds, uploadStreams)
-
-        return when (val completion = receivedCompletions.filter { it.invocationId == invocationId }.first()) {
-            is HubMessage.Completion.Error -> throw RuntimeException(completion.error)
-            is HubMessage.Completion.Simple -> processSimple(completion)
-            is HubMessage.Completion.Resulted -> processResult(completion)
-        }
-    }
-
     private fun resetServerTimeout() {
         serverTimeoutReset.tryEmit(Unit)
     }
@@ -567,7 +404,7 @@ class HubConnection private constructor(
         pingReset.tryEmit(Unit)
     }
 
-    private fun connectedCheck(method: String) {
+    override fun connectedCheck(method: String) {
         if (connectionState.value != HubConnectionState.CONNECTED) {
             throw RuntimeException("The '$method' method cannot be called if the connection is not active.")
         }

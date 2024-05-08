@@ -9,7 +9,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
-fun tickerFlow(period: Duration, initialDelay: Duration = Duration.ZERO) = flow {
+internal fun tickerFlow(period: Duration, initialDelay: Duration = Duration.ZERO) = flow {
     delay(initialDelay)
     while (true) {
         emit(Unit)
@@ -17,7 +17,7 @@ fun tickerFlow(period: Duration, initialDelay: Duration = Duration.ZERO) = flow 
     }
 }
 
-fun <T> Flow<T>.collectInScope(scope: CoroutineScope, action: suspend (T) -> Unit): Job {
+internal fun <T> Flow<T>.collectInScope(scope: CoroutineScope, action: suspend (T) -> Unit): Job {
     var cancellationFlag = false
     return scope.launch {
         collect {
