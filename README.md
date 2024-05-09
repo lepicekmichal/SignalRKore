@@ -1,4 +1,4 @@
-# SignalR Kore
+# SignalRKore
 
 [![Maven Central](https://img.shields.io/maven-central/v/eu.lepicekmichal.signalrkore/signalrkore)](https://mvnrepository.com/artifact/eu.lepicekmichal.signalrkore)
 [![Kotlin](https://img.shields.io/badge/kotlin-1.9.23-blue.svg?logo=kotlin)](http://kotlinlang.org)
@@ -8,12 +8,12 @@
 ![badge-jvm](http://img.shields.io/badge/platform-jvm-DB413D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-lightgray?style=flat)
 
-SignalR Kore is a client library connecting to ASP.NET Core server for real-time functionality. Enables server-side code to push content to
+SignalRKore is a client library connecting to ASP.NET Core server for real-time functionality. Enables server-side code to push content to
 clients and vice-versa. Instantly.
 
 ## Why should you use **this** library
 
-|                            | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) |            SignalR Kore             |
+|                            | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) |             SignalRKore             |
 |:---------------------------|:--------------------------------------------------------------------------------------------:|:-----------------------------------:|
 | Written in                 |                                             Java                                             |               Kotlin                |
 | KMM / KMP                  |                                   :heavy_multiplication_x:                                   |          Android, JVM, iOS          |
@@ -31,9 +31,6 @@ clients and vice-versa. Instantly.
 
 _* Except for SSE which uses only OkHttp at the moment_   
 _** Only for android and jvm for now_
-
-> Even though this library has many advantages over official client library, SignalR Kore would not exist without it as implementation
-> of the SignalR standard is much inspired in it. Therefore I thank the authors from Microsoft.
 
 ## Install
 
@@ -63,14 +60,27 @@ connection.send("broadcastMessage", "Michal", "Hello")
 connection.invoke("broadcastMessage", "Michal", "Hello")
 ```
 
-### Receive from server and/or return result
+### Receive from server
 
 ```kotlin
-connection.on("broadcastMessage", param1 = String::class, param2 = String::class) { user, message ->
+connection.on("broadcastMessage", paramType1 = String::class, paramType2 = String::class).collect { (user, message) ->
     println("User $user is saying: $message")
 }
+```
 
-connection.on("sneakAttack", resultType = String::class, param1 = Boolean::class) { surprise ->
+### Receive from server and return result
+
+```kotlin
+connection.on("sneakAttack", paramType1 = Boolean::class, resultType = String::class) { surprise ->
+    if (surprise) "Wow, you got me"
+    else "I saw you waaay from over there"
+}
+```
+
+maximizing shorthand style
+
+```kotlin
+connection.on("sneakAttack") { surprise: Boolean ->
     if (surprise) "Wow, you got me"
     else "I saw you waaay from over there"
 }
@@ -104,7 +114,7 @@ val message = Message(
 connection.send("broadcastMessage", message)
 
 // Receiving messages
-connection.on("broadcastMessage", Message::class) { message ->
+connection.on("broadcastMessage", Message::class).collect { (message) ->
     println(message.toString())
 }
 ```
@@ -114,8 +124,8 @@ connection.on("broadcastMessage", Message::class) { message ->
 ```kotlin
 // Receiving
 connection.stream(
-    itemType = Int::class,
     method = "Counter",
+    itemType = Int::class,
     arg1 = 10, // up to
     arg2 = 500, // delay
 ).collect {
@@ -216,8 +226,8 @@ class MyHubProtocol : HubProtocol {
 Just decide what to do with the message
 
 ```kotlin
-logger = Logger {
-    Napier.v("SignalR Kore is saying: $it")
+logger = Logger { severity, msg, cause ->
+    Napier.v("SignalRKore is saying: $ms")
 }
 ```
 
@@ -281,5 +291,5 @@ automaticReconnect = AutomaticReconnect.Custom { previousRetryCount, elapsedTime
 - [x] Implement automatic reconnect
 - [ ] Reacting to stream invocation from server
 
-> Special thanks goes to [AzureSignalR ChatRoomLocal sample](https://github.com/aspnet/AzureSignalR-samples/tree/main/samples/ChatRoomLocal)
-> without which I would never start to write this library client.
+> All functionality was possible to implement only thanks
+> to [AzureSignalR ChatRoomLocal sample](https://github.com/aspnet/AzureSignalR-samples/tree/main/samples/ChatRoomLocal)

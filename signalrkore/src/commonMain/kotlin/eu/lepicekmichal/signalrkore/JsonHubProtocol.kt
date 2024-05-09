@@ -23,7 +23,7 @@ class JsonHubProtocol(private val logger: Logger) : HubProtocol {
             .filter { it.isNotEmpty() }
             .map { str ->
                 try {
-                    logger.log(Logger.Level.INFO, "Decoding message: $str")
+                    logger.log(Logger.Severity.INFO, "Decoding message: $str", null)
                     json.decodeFromString(str)
                 } catch (ex: IOException) {
                     throw RuntimeException("Error reading JSON.", ex)
@@ -32,7 +32,8 @@ class JsonHubProtocol(private val logger: Logger) : HubProtocol {
     }
 
     override fun writeMessage(message: HubMessage): ByteArray =
-        (json.encodeToString(message).also { logger.log(Logger.Level.INFO, "Encoded message: $it") } + RECORD_SEPARATOR).toByteArray()
+        (json.encodeToString(message)
+            .also { logger.log(Logger.Severity.INFO, "Encoded message: $it", null) } + RECORD_SEPARATOR).toByteArray()
 
     companion object {
         private const val PROTOCOL_NAME = "json"

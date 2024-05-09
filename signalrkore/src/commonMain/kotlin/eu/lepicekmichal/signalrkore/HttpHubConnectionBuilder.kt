@@ -56,7 +56,7 @@ class HttpHubConnectionBuilder(private val url: String) {
     /**
      * Json instance for (de)serializing custom models coming through as payloads
      */
-    var logger: Logger = Logger { _, _ -> }
+    var logger: Logger = Logger { _, _, _ -> }
 
     /**
      * Defines whether and how to automatically reconnect on close
