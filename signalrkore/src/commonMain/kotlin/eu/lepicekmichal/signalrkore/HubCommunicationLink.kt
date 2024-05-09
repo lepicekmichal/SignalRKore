@@ -4,7 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filter
@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.SerializationException
@@ -26,9 +25,9 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
 
     protected abstract val scope: CoroutineScope
 
-    protected abstract val receivedInvocations: SharedFlow<HubMessage.Invocation>
-    protected abstract val receivedCompletions: SharedFlow<HubMessage.Completion>
-    protected abstract val receivedStreamItems: SharedFlow<HubMessage.StreamItem>
+    private val receivedInvocations = MutableSharedFlow<HubMessage.Invocation>()
+    private val receivedCompletions = MutableSharedFlow<HubMessage.Completion>()
+    private val receivedStreamItems = MutableSharedFlow<HubMessage.StreamItem>()
 
     private val resultProviderRegistry: MutableSet<String> = mutableSetOf()
 
@@ -96,9 +95,9 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
             try {
                 it.result.fromJson(resultType)
             } catch (ex: SerializationException) {
-                throw RuntimeException("Completion result could not be parsed as ${resultType.simpleName}: ${it.result}")
+                throw RuntimeException("Completion result could not be parsed as ${resultType.simpleName}: ${it.result}", ex)
             } catch (ex: IllegalArgumentException) {
-                throw RuntimeException("${resultType.simpleName} could not be initialized from the completion result: ${it.result}")
+                throw RuntimeException("${resultType.simpleName} could not be initialized from the completion result: ${it.result}", ex)
             }
         },
     )
@@ -162,9 +161,9 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
                         try {
                             it.item.fromJson(itemType)
                         } catch (ex: SerializationException) {
-                            throw RuntimeException("Completion result could not be parsed as ${itemType.simpleName}: ${it.item}")
+                            throw RuntimeException("Completion result could not be parsed as ${itemType.simpleName}: ${it.item}", ex)
                         } catch (ex: IllegalArgumentException) {
-                            throw RuntimeException("${itemType.simpleName} could not be initialized from the completion result: ${it.item}")
+                            throw RuntimeException("${itemType.simpleName} could not be initialized from the completion result: ${it.item}", ex)
                         }
                     }
                     .collect { if (!isClosedForSend) send(it) }
@@ -188,6 +187,31 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
             launchStreams(streamIds, streams)
         }
     }
+
+    protected suspend fun processReceivedInvocation(message: HubMessage.Invocation) {
+        if (message is HubMessage.Invocation.Blocking && !resultProviderRegistry.contains(message.target)) {
+            logger.log(
+                severity = Logger.Severity.WARNING,
+                message = "There is no result provider for '${message.target}' despite server expecting it.",
+                cause = null,
+            )
+
+            complete(
+                HubMessage.Completion.Error(
+                    invocationId = message.invocationId,
+                    error = "Client did not provide a result."
+                ),
+            )
+        }
+
+        receivedInvocations.emit(message)
+    }
+
+    protected suspend fun processReceivedStreamItem(message: HubMessage.StreamItem) =
+        receivedStreamItems.emit(message)
+
+    protected suspend fun processReceivedCompletion(message: HubMessage.Completion) =
+        receivedCompletions.emit(message)
 
     final override fun <T : Any> Flow<HubMessage.Invocation>.handleIncomingInvocation(
         resultType: KClass<T>,
@@ -245,36 +269,16 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
     }
 
     final override fun on(target: String, hasResult: Boolean): Flow<HubMessage.Invocation> {
-        if (hasResult && resultProviderRegistry.contains(target)) {
+        if (hasResult && !resultProviderRegistry.add(target)) {
             throw IllegalStateException("There can be only one function for returning result on blocking invocation (method: $target)")
         }
         return receivedInvocations
             .run {
                 if (!hasResult) this
                 else this
-                    .onSubscription { resultProviderRegistry.add(target) }
                     .onCompletion { resultProviderRegistry.remove(target) }
             }
             .filter { it.target == target }
-            .run {
-                if (hasResult) this
-                else this.onEach {
-                    if (it is HubMessage.Invocation.Blocking) {
-                        logger.log(
-                            severity = Logger.Severity.WARNING,
-                            message = "There is no result provider for ${it.target} despite server expecting it.",
-                            cause = null,
-                        )
-
-                        complete(
-                            HubMessage.Completion.Error(
-                                invocationId = it.invocationId,
-                                error = "Client did not provide a result."
-                            ),
-                        )
-                    }
-                }
-            }
             .onEach { logger.log(Logger.Severity.INFO, "Received invocation: $it", null) }
     }
 }

@@ -15,6 +15,7 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -55,10 +56,11 @@ class HubConnection private constructor(
     private val automaticReconnect: AutomaticReconnect,
     override val logger: Logger,
     json: Json,
+    dispatcher: CoroutineDispatcher,
 ) : HubCommunicationLink(json) {
 
     private val job = SupervisorJob()
-    override val scope = CoroutineScope(job + Dispatchers.IO)
+    override val scope = CoroutineScope(job + dispatcher)
 
     private val pingReset = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val pingTicker = pingReset
@@ -82,10 +84,6 @@ class HubConnection private constructor(
             }
         }
 
-    override val receivedInvocations = MutableSharedFlow<HubMessage.Invocation>()
-    override val receivedStreamItems = MutableSharedFlow<HubMessage.StreamItem>()
-    override val receivedCompletions = MutableSharedFlow<HubMessage.Completion>()
-
     private val _connectionState: MutableStateFlow<HubConnectionState> = MutableStateFlow(HubConnectionState.DISCONNECTED)
     val connectionState: StateFlow<HubConnectionState> = _connectionState.asStateFlow()
 
@@ -103,6 +101,7 @@ class HubConnection private constructor(
         transportEnum: TransportEnum,
         json: Json,
         logger: Logger,
+        dispatcher: CoroutineDispatcher,
     ) : this(
         baseUrl = url.takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("A valid url is required."),
         protocol = protocol,
@@ -118,6 +117,7 @@ class HubConnection private constructor(
         automaticReconnect = automaticReconnect,
         json = json,
         logger = logger,
+        dispatcher = dispatcher,
     ) {
         if (transport != null) {
             this.transport = transport
@@ -394,23 +394,12 @@ class HubConnection private constructor(
                         else stop(message.error)
                 }
 
-                is HubMessage.Invocation -> {
-                    if (message is HubMessage.Invocation.Blocking && !resultProviderRegistry.contains(message.target)) {
-                        logger.log(Logger.Level.ERROR, "There is no result provider for '${message.target}' despite server expecting it.")
-
-                        complete(HubMessage.Completion.Error(
-                            invocationId = message.invocationId,
-                            error = "Client did not provide a result."),
-                        )
-                    }
-
-                    receivedInvocations.emit(message)
-                }
+                is HubMessage.Invocation -> processReceivedInvocation(message)
                 is HubMessage.StreamInvocation -> Unit // not supported yet
                 is HubMessage.Ping -> Unit
                 is HubMessage.CancelInvocation -> Unit // this should not happen according to standard
-                is HubMessage.StreamItem -> receivedStreamItems.emit(message)
-                is HubMessage.Completion -> receivedCompletions.emit(message)
+                is HubMessage.StreamItem -> processReceivedStreamItem(message)
+                is HubMessage.Completion -> processReceivedCompletion(message)
             }
         }
     }

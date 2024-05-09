@@ -1,6 +1,8 @@
 package eu.lepicekmichal.signalrkore
 
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -12,7 +14,15 @@ class HttpHubConnectionBuilder(private val url: String) {
      */
     var transportEnum: TransportEnum = TransportEnum.All
 
+    /**
+     * The [Transport] to be used by the [eu.lepicekmichal.signalrkore.HubConnection]
+     */
     internal var transport: Transport? = null
+
+    /**
+     * The [CoroutineDispatcher] to be used by the [eu.lepicekmichal.signalrkore.HubConnection]
+     */
+    internal var dispatcher: CoroutineDispatcher = Dispatchers.IO
 
     /**
      * The [HttpClient] to be used by the [eu.lepicekmichal.signalrkore.HubConnection]
@@ -78,5 +88,6 @@ class HttpHubConnectionBuilder(private val url: String) {
         transportEnum,
         json,
         logger,
+        dispatcher
     )
 }

@@ -3,7 +3,6 @@ package eu.lepicekmichal.signalrkore
 import io.ktor.utils.io.core.toByteArray
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.filter
@@ -18,7 +17,7 @@ class MockTransport(
 
     private val receivedMessages: MutableSharedFlow<String> = MutableSharedFlow()
 
-    var nextSentMessage: SingleSubject<String> = SingleSubject()
+    var nextSentMessage: Single<String> = Single()
         private set
 
     lateinit var url: String
@@ -37,7 +36,7 @@ class MockTransport(
     override suspend fun send(message: ByteArray) {
         if (!ignorePings || !isPing(message)) {
             nextSentMessage.setResult(io.ktor.utils.io.core.String(message))
-            nextSentMessage = SingleSubject()
+            nextSentMessage = Single()
         }
     }
 

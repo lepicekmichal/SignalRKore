@@ -1,30 +1,38 @@
 package eu.lepicekmichal.signalrkore
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.timeout
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.test.assertNotNull
+import kotlin.time.Duration.Companion.seconds
 
-data class LogEvent(val level: Logger.Level, val message: String)
+data class LogEvent(val severity: Logger.Severity, val message: String, val cause: Throwable?)
 
 class TestLogger : Logger {
 
-    private val logs: MutableList<LogEvent> = mutableListOf()
+    private val scope = CoroutineScope(Dispatchers.Unconfined)
 
-    override fun log(level: Logger.Level, message: String) {
-        logs.add(LogEvent(level, message))
+    private val logs: MutableSharedFlow<LogEvent> = MutableSharedFlow(replay = 10)
+
+    override fun log(severity: Logger.Severity, message: String, cause: Throwable?) {
+        scope.launch {
+            logs.emit(LogEvent(severity, message, cause))
+        }
     }
 
-    fun assertLogEquals(message: String): LogEvent {
-        val log = logs.firstOrNull { it.message == message }
+    @OptIn(FlowPreview::class)
+    suspend fun assertLogEquals(message: String): LogEvent = withContext(Dispatchers.Default) {
+        val log = logs.filter { it.message == message }.timeout(5.seconds).catch { }.firstOrNull()
 
         assertNotNull(log, "Log message '$message' not found")
 
-        return log
-    }
-
-    fun assertLogContains(message: String): LogEvent {
-        val log = logs.firstOrNull { it.message.contains(message) }
-
-        assertNotNull(log, "Log message containing '$message' not found")
-
-        return log
+        log
     }
 }
