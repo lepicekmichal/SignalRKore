@@ -199,8 +199,8 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
             complete(
                 HubMessage.Completion.Error(
                     invocationId = message.invocationId,
-                    error = "Client did not provide a result."
-                ),
+                    error = "Client did not provide a result.",
+                )
             )
         }
 
