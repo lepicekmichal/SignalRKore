@@ -9,10 +9,38 @@ import kotlin.test.assertFailsWith
 class OnWithResultTest : HubTest() {
 
     @Test
+    fun `test syntax`() = runTest {
+
+        hubConnection.onWithResult2("withResultZeroParam", resultType = Boolean::class) { true }
+        hubConnection.onWithResult2("withResultZeroParamInline") { -> true }
+
+        hubConnection.onWithResult2("withResultOneParam", paramType1 = Int::class, resultType = Int::class) { p1 -> p1 * p1 }
+        hubConnection.onWithResult2("withResultOneParamInline") { p1: Int -> p1 * p1 }
+
+        hubConnection.onWithResult2("withResultTwoParam", paramType1 = Int::class, paramType2 = Int::class, resultType = Int::class) { p1, p2 -> p1 * p2 }
+        hubConnection.onWithResult2("withResultTwoParamInline") { p1: Int, p2: Int -> p1 * p2 }
+
+
+        hubConnection.onWithResult2("withResult", resultType = Boolean::class) { true }
+        hubConnection.onWithResult2("withResultInline") { -> true }
+
+
+        hubConnection.on2("unitZeroParam") { println("test") }
+
+        hubConnection.on2("unitOneParam", paramType1 = Int::class) { p1 -> println(p1) }
+        hubConnection.on2("unitOneParamInline") { p1: Int -> println(p1) }
+
+        hubConnection.on2("unitTwoParam", paramType1 = Int::class, paramType2 = String::class) { p1, p2 -> println(p2 + p1) }
+        hubConnection.on2("unitTwoParamInline") { p1: Int, p2: String -> println(p2 + p1) }
+
+        hubConnection.start()
+    }
+
+    @Test
     fun `handler with no parameters should return a value`() = runTest {
         var called = false
 
-        hubConnection.on("process", resultType = Boolean::class) {
+        hubConnection.onWithResult2("process", resultType = Boolean::class) {
             called = true
             true
         }
@@ -31,7 +59,7 @@ class OnWithResultTest : HubTest() {
     fun `handler with no return value should report an error`() = runTest {
         val nonResultCalled = Completable()
 
-        hubConnection.on<Unit>("process") { nonResultCalled.complete() }
+        hubConnection.on2("process") { nonResultCalled.complete() }
         hubConnection.start()
 
         val sentMessage = transport.nextSentMessage
@@ -57,7 +85,7 @@ class OnWithResultTest : HubTest() {
 
     @Test
     fun `faulty handler should return an error`() = runTest {
-        hubConnection.on("process", resultType = Int::class) {
+        hubConnection.onWithResult2("process", resultType = Int::class) {
             throw RuntimeException("Custom error.")
         }
         hubConnection.start()
@@ -72,10 +100,10 @@ class OnWithResultTest : HubTest() {
 
     @Test
     fun `registering multiple handlers for same target should raise an exception`() = runTest {
-        hubConnection.on("process", resultType = Int::class) { 1 }
+        hubConnection.onWithResult2("process", resultType = Int::class) { 1 }
 
         val exception = assertFailsWith<RuntimeException> {
-            hubConnection.on("process", resultType = Int::class) { 2 }
+            hubConnection.onWithResult2("process", resultType = Int::class) { 2 }
         }
 
         assertEquals("There can be only one function for returning result on blocking invocation (method: process)", exception.message)
@@ -85,7 +113,7 @@ class OnWithResultTest : HubTest() {
     fun `handler with result should log if server does not expect a return value`() = runTest {
         val value = Single<Int>()
 
-        hubConnection.on("process", resultType = Int::class) { value.updateResult { 42 }!! }
+        hubConnection.onWithResult2("process", resultType = Int::class) { value.updateResult { 42 }!! }
         hubConnection.start()
 
         transport.receiveMessage("{\"type\":1,\"target\":\"process\",\"arguments\":[]}$RECORD_SEPARATOR")
@@ -98,7 +126,7 @@ class OnWithResultTest : HubTest() {
     fun `handler with one param should return a value`() = runTest {
         var calledWith: String? = null
 
-        hubConnection.on("ping", resultType = String::class, paramType1 = String::class) { p ->
+        hubConnection.onWithResult2("ping", resultType = String::class, paramType1 = String::class) { p ->
             calledWith = p
             "pong"
         }
@@ -118,7 +146,7 @@ class OnWithResultTest : HubTest() {
         var calledWith: String? = null
         var calledWith2: Int? = null
 
-        hubConnection.on(
+        hubConnection.onWithResult2(
             "ping",
             resultType = String::class,
             paramType1 = String::class,
