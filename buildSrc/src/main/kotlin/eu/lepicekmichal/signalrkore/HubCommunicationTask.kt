@@ -134,7 +134,8 @@ open class HubCommunicationTask : DefaultTask() {
                             .receiver(Flow::class.asTypeName().parameterizedBy(TypeVariableName(name = "HubMessage.Invocation")))
                             .addParameter(name = "resultType", type = genericTypeVariableT.inKClass)
                             .addParameter(
-                                name = "callback", type = LambdaTypeName
+                                name = "callback",
+                                type = LambdaTypeName
                                     .get(
                                         parameters = listOf(ParameterSpec.unnamed(TypeVariableName(name = "HubMessage.Invocation"))),
                                         returnType = genericTypeVariableT,
@@ -150,6 +151,23 @@ open class HubCommunicationTask : DefaultTask() {
                             .addParameter(name = "hasResult", type = Boolean::class.asTypeName())
                             .addModifiers(KModifier.ABSTRACT)
                             .returns(Flow::class.asTypeName().parameterizedBy(TypeVariableName(name = "HubMessage.Invocation")))
+                            .build()
+                    )
+                    .addFunction(
+                        FunSpec.builder("mapCatching")
+                            .addTypeVariable(genericTypeVariableT)
+                            .receiver(Flow::class.asTypeName().parameterizedBy(TypeVariableName(name = "HubMessage.Invocation")))
+                            .addParameter(
+                                name = "transform",
+                                type = LambdaTypeName
+                                    .get(
+                                        parameters = listOf(ParameterSpec("value", TypeVariableName(name = "HubMessage.Invocation"))),
+                                        returnType = genericTypeVariableT,
+                                    )
+                                    .copy(suspending = true)
+                            )
+                            .addModifiers(KModifier.ABSTRACT)
+                            .returns(Flow::class.asTypeName().parameterizedBy(genericTypeVariableT))
                             .build()
                     )
                     .addOutMethods()
@@ -257,7 +275,7 @@ open class HubCommunicationTask : DefaultTask() {
                         addStatement(
                             """
                             |return 
-                            |   on(target = target, hasResult = false).map {
+                            |   on(target = target, hasResult = false).mapCatching {
                             ${
                                 if (paramTypes.isNotEmpty()) "|      OnValue${paramTypes.size}(" else ""
                             }

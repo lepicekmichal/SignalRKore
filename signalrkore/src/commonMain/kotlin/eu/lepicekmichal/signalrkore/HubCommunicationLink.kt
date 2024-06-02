@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -267,6 +268,25 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
             }
         }
     }
+
+    final override fun <R : Any> Flow<HubMessage.Invocation>.mapCatching(transform: suspend (value: HubMessage.Invocation) -> R): Flow<R> =
+        mapNotNull { message ->
+            try {
+                transform(message)
+            } catch (ex: Exception) {
+                logger.log(
+                    severity = Logger.Severity.ERROR,
+                    message = "Getting result for ${
+                        when (message) {
+                            is HubMessage.Invocation.Blocking -> "blocking"
+                            is HubMessage.Invocation.NonBlocking -> "non-blocking"
+                        }
+                    } invocation of '${message.target}' method has thrown an exception",
+                    cause = ex,
+                )
+                null
+            }
+        }
 
     final override fun on(target: String, hasResult: Boolean): Flow<HubMessage.Invocation> {
         if (hasResult && !resultProviderRegistry.add(target)) {
