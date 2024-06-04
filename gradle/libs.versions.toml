@@ -1,0 +1,31 @@
+[versions]
+gradle = "8.4.1"
+kotlin = "2.0.0"
+kotlinxSerializationJson = "1.6.3"
+kotlinxDatetime = "0.6.0"
+ktorClientCore = "2.3.11"
+okhttp = "4.12.0"
+okio = "3.9.0"
+vanniktech = "0.28.0"
+
+[libraries]
+gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
+kotlin-stdlib-common = { module = "org.jetbrains.kotlin:kotlin-stdlib-common", version.ref = "kotlin" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+ktor-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktorClientCore" }
+ktor-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorClientCore" }
+ktor-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktorClientCore" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktorClientCore" }
+ktor-websockets = { module = "io.ktor:ktor-client-websockets", version.ref = "ktorClientCore" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+
+[plugins]
+
+android-application = { id = "com.android.application", version.ref = "gradle" }
+android-library = { id = "com.android.library", version.ref = "gradle" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+vanniktech-publish = { id = "com.vanniktech.maven.publish.base", version.ref = "vanniktech" }

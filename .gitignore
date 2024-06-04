@@ -19,3 +19,4 @@ proguard/
 *.ipr
 *.iws
 .idea/
+.kotlin/
