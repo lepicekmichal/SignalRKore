@@ -2,10 +2,10 @@ import eu.lepicekmichal.signalrkore.HubCommunicationTask
 import org.gradle.internal.os.OperatingSystem
 
 plugins {
-    kotlin("multiplatform")
-    kotlin("plugin.serialization")
-    id("com.android.library")
-    id("com.vanniktech.maven.publish.base")
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.vanniktech.publish)
 }
 
 group = requireNotNull(project.findProperty("GROUP"))
@@ -55,14 +55,14 @@ kotlin {
             kotlin.srcDir(project.layout.buildDirectory.dir("generated/kotlin").get().asFile)
 
             dependencies {
-                implementation("org.jetbrains.kotlin:kotlin-stdlib-common:2.0.0")
-                implementation("io.ktor:ktor-client-core:2.3.11")
-                implementation("io.ktor:ktor-client-websockets:2.3.11")
-                implementation("io.ktor:ktor-client-content-negotiation:2.3.11")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.11")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
-                implementation("com.squareup.okio:okio:3.9.0")
+                implementation(libs.kotlin.stdlib.common)
+                implementation(libs.ktor.core)
+                implementation(libs.ktor.websockets)
+                implementation(libs.ktor.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.datetime)
+                implementation(libs.okio)
             }
         }
         val commonTest by getting {
@@ -72,8 +72,8 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation("com.squareup.okhttp3:okhttp:4.12.0")
-                implementation("io.ktor:ktor-client-okhttp:2.3.11")
+                implementation(libs.okhttp)
+                implementation(libs.ktor.okhttp)
             }
         }
         val androidMain by getting {
