@@ -325,7 +325,7 @@ open class HubCommunicationTask : DefaultTask() {
                     returns = Unit::class.asTypeName(),
                     body = {
                         if (!reified) {
-                            addStatement("%L", "on(target = target, hasResult = true)")
+                            addStatement("%L", "on(target = target, hasResult = resultType != Unit::class)")
                                 .addCode(
                                     format = "%L",
                                     """

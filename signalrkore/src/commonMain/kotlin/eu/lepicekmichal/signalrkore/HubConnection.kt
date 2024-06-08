@@ -15,6 +15,7 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -55,10 +56,11 @@ class HubConnection private constructor(
     private val automaticReconnect: AutomaticReconnect,
     override val logger: Logger,
     json: Json,
+    dispatcher: CoroutineDispatcher,
 ) : HubCommunicationLink(json) {
 
     private val job = SupervisorJob()
-    override val scope = CoroutineScope(job + Dispatchers.IO)
+    override val scope = CoroutineScope(job + dispatcher)
 
     private val pingReset = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val pingTicker = pingReset
@@ -95,9 +97,11 @@ class HubConnection private constructor(
         protocol: HubProtocol,
         handshakeResponseTimeout: Duration,
         headers: Map<String, String>,
+        transport: Transport?,
         transportEnum: TransportEnum,
         json: Json,
         logger: Logger,
+        dispatcher: CoroutineDispatcher,
     ) : this(
         baseUrl = url.takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("A valid url is required."),
         protocol = protocol,
@@ -113,7 +117,12 @@ class HubConnection private constructor(
         automaticReconnect = automaticReconnect,
         json = json,
         logger = logger,
-    )
+        dispatcher = dispatcher,
+    ) {
+        if (transport != null) {
+            this.transport = transport
+        }
+    }
 
     suspend fun start(reconnectionAttempt: Boolean = false) {
         if (connectionState.value != HubConnectionState.DISCONNECTED && connectionState.value != HubConnectionState.RECONNECTING) return
@@ -141,10 +150,12 @@ class HubConnection private constructor(
             Negotiation(TransportEnum.WebSockets, baseUrl)
         }
 
-        transport = when (negotiationTransport) {
-            TransportEnum.LongPolling -> LongPollingTransport(headers, httpClient)
-            TransportEnum.ServerSentEvents -> ServerSentEventsTransport(headers, httpClient)
-            else -> WebSocketTransport(headers, httpClient)
+        if (!::transport.isInitialized) {
+            transport = when (negotiationTransport) {
+                TransportEnum.LongPolling -> LongPollingTransport(headers, httpClient)
+                TransportEnum.ServerSentEvents -> ServerSentEventsTransport(headers, httpClient)
+                else -> WebSocketTransport(headers, httpClient)
+            }
         }
 
         try {

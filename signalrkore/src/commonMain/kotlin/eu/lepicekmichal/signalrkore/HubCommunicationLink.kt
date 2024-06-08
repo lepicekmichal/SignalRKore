@@ -301,4 +301,149 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
             .filter { it.target == target }
             .onEach { logger.log(Logger.Severity.INFO, "Received invocation: $it", null) }
     }
+
+
+    fun on2(target: String, callback: suspend () -> Unit) {
+        on2(
+            target = target,
+            paramTypes = emptyList(),
+            callback = {
+                callback()
+            },
+        )
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <P1 : Any> on2(target: String, paramType1: KClass<P1>, callback: suspend (P1) -> Unit) {
+        on2(
+            target = target,
+            paramTypes = listOf(paramType1),
+            callback = {
+                callback(it[0] as P1)
+            },
+        )
+    }
+
+    inline fun <reified P1 : Any> on2(target: String, noinline callback: suspend (P1) -> Unit) {
+        on2(
+            target = target,
+            paramType1 = P1::class,
+            callback = callback,
+        )
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <P1 : Any, P2 : Any> on2(target: String, paramType1: KClass<P1>, paramType2: KClass<P2>, callback: suspend (P1, P2) -> Unit) {
+        on2(
+            target = target,
+            paramTypes = listOf(paramType1, paramType2),
+            callback = {
+                callback(it[0] as P1, it[1] as P2)
+            },
+        )
+    }
+
+    inline fun <reified P1 : Any, reified P2 : Any> on2(target: String, noinline callback: suspend (P1, P2) -> Unit) {
+        on2(
+            target = target,
+            paramType1 = P1::class,
+            paramType2 = P2::class,
+            callback = callback,
+        )
+    }
+
+    fun <RESULT: Any> onWithResult2(target: String, resultType: KClass<RESULT>, callback: suspend () -> RESULT) {
+        onWithResult2(
+            target = target,
+            resultType = resultType,
+            paramTypes = emptyList(),
+            callback = {
+                callback()
+            },
+        )
+    }
+
+    inline fun <reified RESULT : Any> onWithResult2(target: String, noinline callback: suspend () -> RESULT) {
+        onWithResult2(
+            target = target,
+            resultType = RESULT::class,
+            callback = callback,
+        )
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <RESULT: Any, P1 : Any> onWithResult2(target: String, paramType1: KClass<P1>, resultType: KClass<RESULT>, callback: suspend (P1) -> RESULT) {
+        onWithResult2(
+            target = target,
+            resultType = resultType,
+            paramTypes = listOf(paramType1),
+            callback = {
+                callback(it[0] as P1)
+            },
+        )
+    }
+
+    inline fun <reified RESULT : Any, reified P1 : Any> onWithResult2(target: String, noinline callback: suspend (P1) -> RESULT) {
+        onWithResult2(
+            target = target,
+            paramType1 = P1::class,
+            resultType = RESULT::class,
+            callback = callback,
+        )
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <RESULT: Any, P1 : Any, P2 : Any> onWithResult2(target: String, paramType1: KClass<P1>, paramType2: KClass<P2>, resultType: KClass<RESULT>, callback: suspend (P1, P2) -> RESULT) {
+        onWithResult2(
+            target = target,
+            resultType = resultType,
+            paramTypes = listOf(paramType1, paramType2),
+            callback = {
+                callback(it[0] as P1, it[1] as P2)
+            },
+        )
+    }
+
+    inline fun <reified RESULT : Any, reified P1 : Any, reified P2 : Any> onWithResult2(target: String, noinline callback: suspend (P1, P2) -> RESULT) {
+        onWithResult2(
+            target = target,
+            paramType1 = P1::class,
+            paramType2 = P2::class,
+            resultType = RESULT::class,
+            callback = callback,
+        )
+    }
+
+    fun <RESULT: Any> onWithResult2(target: String, resultType: KClass<RESULT>, paramTypes: List<KClass<*>>, callback: suspend (List<Any>) -> RESULT) {
+        if (!resultProviderRegistry.add(target)) {
+            throw IllegalStateException("There can be only one function for returning result on blocking invocation (method: $target)")
+        }
+
+        return receivedInvocations
+            .onCompletion { resultProviderRegistry.remove(target) }
+            .filter { it.target == target }
+            .onEach { logger.log(Logger.Severity.INFO, "Received invocation: $it", null) }
+            .handleIncomingInvocation(
+                resultType = resultType,
+                callback = {
+                    callback(
+                        it.arguments.mapIndexed { index, arg -> arg.fromJson(paramTypes[index])  }
+                    )
+                },
+            )
+    }
+
+    fun on2(target: String, paramTypes: List<KClass<*>>, callback: suspend (List<Any>) -> Unit) {
+        return receivedInvocations
+            .filter { it.target == target }
+            .onEach { logger.log(Logger.Severity.INFO, "Received invocation: $it", null) }
+            .handleIncomingInvocation(
+                resultType = Unit::class,
+                callback = {
+                    callback(
+                        it.arguments.mapIndexed { index, arg -> arg.fromJson(paramTypes[index])  }
+                    )
+                },
+            )
+    }
 }
