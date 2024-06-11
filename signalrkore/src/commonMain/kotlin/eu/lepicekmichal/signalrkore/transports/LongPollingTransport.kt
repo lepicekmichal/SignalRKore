@@ -1,15 +1,18 @@
 package eu.lepicekmichal.signalrkore.transports
 
 import eu.lepicekmichal.signalrkore.Transport
-import eu.lepicekmichal.signalrkore.utils.buildAsHeaders
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.plugins.*
-import io.ktor.client.request.*
-import io.ktor.http.*
+import eu.lepicekmichal.signalrkore.utils.headers
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.plugins.timeout
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentLength
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
@@ -18,7 +21,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
-import kotlin.jvm.Volatile
 
 internal class LongPollingTransport(private val headers: Map<String, String>, private val client: HttpClient) : Transport {
 
@@ -41,7 +43,7 @@ internal class LongPollingTransport(private val headers: Map<String, String>, pr
         this.url = url
 
         val response = client.get(pollUrl) {
-            this@LongPollingTransport.headers.buildAsHeaders()
+            headers(this@LongPollingTransport.headers)
         }
 
         if (response.status != HttpStatusCode.OK) {
@@ -64,7 +66,7 @@ internal class LongPollingTransport(private val headers: Map<String, String>, pr
                 }
 
                 val response = client.get(pollUrl) {
-                    this@LongPollingTransport.headers.buildAsHeaders()
+                    headers(this@LongPollingTransport.headers)
                     timeout {
                         requestTimeoutMillis = POLL_TIMEOUT
                     }
@@ -95,7 +97,7 @@ internal class LongPollingTransport(private val headers: Map<String, String>, pr
         if (!active) throw IllegalStateException("Cannot send unless the transport is active")
 
         client.post(url) {
-            this@LongPollingTransport.headers.buildAsHeaders()
+            headers(this@LongPollingTransport.headers)
             setBody(message)
         }
     }
@@ -107,7 +109,7 @@ internal class LongPollingTransport(private val headers: Map<String, String>, pr
         stopping = true
         active = false
         try {
-            client.delete(url) { this@LongPollingTransport.headers.buildAsHeaders() }
+            client.delete(url) { headers(this@LongPollingTransport.headers) }
         } finally {
             //log("LongPolling transport stopped.")
             dispose()

@@ -18,7 +18,6 @@ import io.ktor.utils.io.core.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
@@ -96,6 +95,7 @@ class HubConnection private constructor(
         handshakeResponseTimeout: Duration,
         headers: Map<String, String>,
         transportEnum: TransportEnum,
+        transport: Transport?,
         json: Json,
         logger: Logger,
     ) : this(
@@ -113,7 +113,9 @@ class HubConnection private constructor(
         automaticReconnect = automaticReconnect,
         json = json,
         logger = logger,
-    )
+    ) {
+        transport?.let { this.transport = it }
+    }
 
     suspend fun start(reconnectionAttempt: Boolean = false) {
         if (connectionState.value != HubConnectionState.DISCONNECTED && connectionState.value != HubConnectionState.RECONNECTING) return
@@ -141,10 +143,12 @@ class HubConnection private constructor(
             Negotiation(TransportEnum.WebSockets, baseUrl)
         }
 
-        transport = when (negotiationTransport) {
-            TransportEnum.LongPolling -> LongPollingTransport(headers, httpClient)
-            TransportEnum.ServerSentEvents -> ServerSentEventsTransport(headers, httpClient)
-            else -> WebSocketTransport(headers, httpClient)
+        if (!::transport.isInitialized) {
+            transport = when (negotiationTransport) {
+                TransportEnum.LongPolling -> LongPollingTransport(headers, httpClient)
+                TransportEnum.ServerSentEvents -> ServerSentEventsTransport(headers, httpClient)
+                else -> WebSocketTransport(headers, httpClient)
+            }
         }
 
         try {

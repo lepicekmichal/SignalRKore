@@ -3,12 +3,16 @@ package eu.lepicekmichal.signalrkore.transports
 import eu.lepicekmichal.signalrkore.HubMessage
 import eu.lepicekmichal.signalrkore.RECORD_SEPARATOR
 import eu.lepicekmichal.signalrkore.Transport
-import eu.lepicekmichal.signalrkore.utils.buildAsHeaders
-import io.ktor.client.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.websocket.*
-import io.ktor.utils.io.core.*
-import io.ktor.websocket.*
+import eu.lepicekmichal.signalrkore.utils.headers
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.timeout
+import io.ktor.client.plugins.websocket.webSocketSession
+import io.ktor.utils.io.core.toByteArray
+import io.ktor.websocket.WebSocketSession
+import io.ktor.websocket.close
+import io.ktor.websocket.readBytes
+import io.ktor.websocket.send
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -35,7 +39,7 @@ internal class WebSocketTransport(
         val formattedUrl = formatUrl(url)
 
         session = client.webSocketSession(urlString = formattedUrl) {
-            this@WebSocketTransport.headers.buildAsHeaders()
+            headers(this@WebSocketTransport.headers)
 
             timeout {
                 requestTimeoutMillis = HttpTimeout.INFINITE_TIMEOUT_MS
