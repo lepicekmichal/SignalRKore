@@ -5,7 +5,6 @@ import eu.lepicekmichal.signalrkore.RECORD_SEPARATOR
 import eu.lepicekmichal.signalrkore.Transport
 import eu.lepicekmichal.signalrkore.utils.headers
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.timeout
 import io.ktor.client.plugins.websocket.webSocketSession
 import io.ktor.utils.io.core.toByteArray
@@ -42,7 +41,7 @@ internal class WebSocketTransport(
             headers(this@WebSocketTransport.headers)
 
             timeout {
-                requestTimeoutMillis = HttpTimeout.INFINITE_TIMEOUT_MS
+                requestTimeoutMillis = Long.MAX_VALUE // HttpTimeout.INFINITE_TIMEOUT_MS or HttpTimeoutConfig.INFINITE_TIMEOUT_MS
             }
         }
 

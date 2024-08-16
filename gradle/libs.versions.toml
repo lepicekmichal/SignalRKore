@@ -1,16 +1,18 @@
 [versions]
-gradle = "8.4.2"
-kotlin = "2.0.0"
-kotlinxSerializationJson = "1.6.3"
+gradle = "8.5.2"
+kotlin = "2.0.10"
+kotlinxCoroutinesTest = "1.8.0"
+kotlinxSerializationJson = "1.7.1"
 kotlinxDatetime = "0.6.0"
-ktorClientCore = "2.3.11"
+ktorClientCore = "2.3.12"
 okhttp = "4.12.0"
 okio = "3.9.0"
-vanniktech = "0.28.0"
+vanniktech = "0.29.0"
 
 [libraries]
 gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
 kotlin-stdlib-common = { module = "org.jetbrains.kotlin:kotlin-stdlib-common", version.ref = "kotlin" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 ktor-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktorClientCore" }
