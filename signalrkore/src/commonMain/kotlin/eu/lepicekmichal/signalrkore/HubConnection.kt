@@ -18,6 +18,7 @@ import io.ktor.utils.io.core.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
@@ -125,7 +126,7 @@ class HubConnection private constructor(
         }
 
         if (skipNegotiate && transportEnum != TransportEnum.WebSockets)
-            throw RuntimeException("Negotiation can only be skipped when using the WebSocket transport")
+            throw RuntimeException("Negotiation can only be skipped when using a WebSocket transport")
 
         val (negotiationTransport, negotiationUrl) = if (!skipNegotiate) {
             try {

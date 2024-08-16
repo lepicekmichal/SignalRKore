@@ -73,6 +73,7 @@ class HttpHubConnectionBuilder(private val url: String) {
         handshakeResponseTimeout,
         headers.toMap(),
         transportEnum,
+        null,
         json,
         logger,
     )
