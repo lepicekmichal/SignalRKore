@@ -18,7 +18,6 @@ import io.ktor.utils.io.core.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
@@ -50,7 +49,7 @@ class HubConnection private constructor(
     private val httpClient: HttpClient,
     private val transportEnum: TransportEnum,
     private val handshakeResponseTimeout: Duration,
-    private val headers: Map<String, String>,
+    private val headers: MutableMap<String, String>, // does this need to be mutable?
     private val skipNegotiate: Boolean,
     private val automaticReconnect: AutomaticReconnect,
     override val logger: Logger,
@@ -94,7 +93,7 @@ class HubConnection private constructor(
         httpClient: HttpClient?,
         protocol: HubProtocol,
         handshakeResponseTimeout: Duration,
-        headers: Map<String, String>,
+        headers: MutableMap<String, String>,
         transportEnum: TransportEnum,
         transport: Transport?,
         json: Json,
@@ -130,7 +129,7 @@ class HubConnection private constructor(
 
         val (negotiationTransport, negotiationUrl) = if (!skipNegotiate) {
             try {
-                startNegotiate(baseUrl, 0, headers)
+                startNegotiate(baseUrl, 0)
             } catch (ex: Exception) {
                 if (!reconnectionAttempt) {
                     if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(ex.message)
@@ -215,7 +214,6 @@ class HubConnection private constructor(
     private suspend fun startNegotiate(
         url: String,
         negotiateAttempts: Int,
-        headers: Map<String, String>,
     ): Negotiation {
         if (connectionState.value != HubConnectionState.CONNECTING && connectionState.value != HubConnectionState.RECONNECTING)
             throw RuntimeException("HubConnection trying to negotiate when not in the CONNECTING state.")
@@ -230,17 +228,13 @@ class HubConnection private constructor(
             is NegotiateResponse.Redirect -> {
                 if (negotiateAttempts >= MAX_NEGOTIATE_ATTEMPTS) throw RuntimeException("Negotiate redirection limit exceeded.")
 
+                response.accessToken?.let { token ->
+                    headers["Authorization"] = "Bearer $token"
+                }
+
                 return startNegotiate(
-                    response.url,
-                    negotiateAttempts + 1,
-                    headers.map {
-                            (
-                                key,
-                                value,
-                            ),
-                        ->
-                        key to (if (key == "Authorization") "Bearer " + response.accessToken else value)
-                    }.toMap()
+                    url = response.url,
+                    negotiateAttempts = negotiateAttempts + 1,
                 )
             }
 
