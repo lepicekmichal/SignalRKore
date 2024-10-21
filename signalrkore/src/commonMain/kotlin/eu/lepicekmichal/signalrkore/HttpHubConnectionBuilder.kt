@@ -71,7 +71,7 @@ class HttpHubConnectionBuilder(private val url: String) {
         httpClient,
         if (::protocol.isInitialized) protocol else JsonHubProtocol(logger),
         handshakeResponseTimeout,
-        headers.toMap(),
+        headers,
         transportEnum,
         null,
         json,

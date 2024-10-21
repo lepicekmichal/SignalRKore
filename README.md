@@ -1,7 +1,7 @@
 # SignalRKore
 
 [![Maven Central](https://img.shields.io/maven-central/v/eu.lepicekmichal.signalrkore/signalrkore)](https://mvnrepository.com/artifact/eu.lepicekmichal.signalrkore)
-[![Kotlin](https://img.shields.io/badge/kotlin-2.0.10-blue.svg?logo=kotlin)](http://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/kotlin-2.0.21-blue.svg?logo=kotlin)](http://kotlinlang.org)
 [![GitHub License](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0)
 [![Kotlin Weekly](https://img.shields.io/badge/Kotlin%20Weekly-%23416-purple?style=flat)](https://mailchi.mp/kotlinweekly/kotlin-weekly-416)
 
@@ -18,20 +18,17 @@ clients and vice-versa. Instantly.
 |:---------------------------|:--------------------------------------------------------------------------------------------:|:-----------------------------------:|
 | Written in                 |                                             Java                                             |               Kotlin                |
 | KMM / KMP                  |                                   :heavy_multiplication_x:                                   |          Android, JVM, iOS          |
-| Network                    |                                         OkHttp only                                          |    Ktor (any engine pluggable*)     |
+| Network                    |                                         OkHttp only                                          |                Ktor                 |
 | Async                      |                                            RxJava                                            |             Coroutines              |
 | Serialization              |                                   Gson (non-customizable)                                    | Kotlinx Serializable (customizable) |
 | Streams                    |                                      :heavy_check_mark:                                      |         :heavy_check_mark:          |
 | Transport fallback         |                                   :heavy_multiplication_x:                                   |      :heavy_multiplication_x:       |
 | Automatic reconnect        |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
-| SSE                        |                                   :heavy_multiplication_x:                                   |        :heavy_check_mark: **        |
+| SSE                        |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
 | Connection status          |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
 | Logging                    |                                            SLF4J                                             |          Custom interface           |
 | MsgPack                    |                                      :heavy_check_mark:                                      |      :heavy_multiplication_x:       |
 | Tested by time & community |                                      :heavy_check_mark:                                      |      :heavy_multiplication_x:       |
-
-_* Except for SSE which uses only OkHttp at the moment_   
-_** Only for android and jvm for now_
 
 ## Install
 
@@ -181,7 +178,7 @@ HubConnectionBuilder
 
 1. TransportEnum.All _(default, automatic choice based on availability)_
 2. TransportEnum.WebSockets
-3. TransportEnum.ServerSentEvents _(only for android and jvm, only okhttp engine)_
+3. TransportEnum.ServerSentEvents
 4. TransportEnum.LongPolling
 
 ### Add your own ktor http client
@@ -201,6 +198,7 @@ But if you do opt-in to pass the http client, make sure it has WebSockets and ot
 ```kotlin
 HttpClient {
     install(WebSockets)
+    install(SSE)
     install(HttpTimeout)
     install(ContentNegotiation) { json() }
 }

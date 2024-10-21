@@ -1,13 +1,13 @@
 [versions]
-gradle = "8.5.2"
-kotlin = "2.0.10"
-kotlinxCoroutinesTest = "1.8.0"
-kotlinxSerializationJson = "1.7.1"
+gradle = "8.7.1"
+kotlin = "2.0.21"
+kotlinxCoroutinesTest = "1.8.1"
+kotlinxSerializationJson = "1.7.3"
 kotlinxDatetime = "0.6.0"
-ktorClientCore = "2.3.12"
+ktorClientCore = "3.0.0"
 okhttp = "4.12.0"
-okio = "3.9.0"
-vanniktech = "0.29.0"
+okio = "3.9.1"
+vanniktech = "0.30.0"
 
 [libraries]
 gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
@@ -17,6 +17,7 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 ktor-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktorClientCore" }
 ktor-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorClientCore" }
+ktor-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktorClientCore" }
 ktor-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktorClientCore" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktorClientCore" }
 ktor-websockets = { module = "io.ktor:ktor-client-websockets", version.ref = "ktorClientCore" }
