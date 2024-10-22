@@ -49,7 +49,7 @@ class HubConnection private constructor(
     private val httpClient: HttpClient,
     private val transportEnum: TransportEnum,
     private val handshakeResponseTimeout: Duration,
-    private val headers: MutableMap<String, String>, // does this need to be mutable?
+    private val headers: Map<String, String>,
     private val skipNegotiate: Boolean,
     private val automaticReconnect: AutomaticReconnect,
     override val logger: Logger,
@@ -93,7 +93,7 @@ class HubConnection private constructor(
         httpClient: HttpClient?,
         protocol: HubProtocol,
         handshakeResponseTimeout: Duration,
-        headers: MutableMap<String, String>,
+        headers: Map<String, String>,
         transportEnum: TransportEnum,
         transport: Transport?,
         json: Json,
@@ -127,9 +127,9 @@ class HubConnection private constructor(
         if (skipNegotiate && transportEnum != TransportEnum.WebSockets)
             throw RuntimeException("Negotiation can only be skipped when using a WebSocket transport")
 
-        val (negotiationTransport, negotiationUrl) = if (!skipNegotiate) {
+        val negotiation = if (!skipNegotiate) {
             try {
-                startNegotiate(baseUrl, 0)
+                startNegotiate(url = baseUrl, headers = headers, negotiateAttempts = 0)
             } catch (ex: Exception) {
                 if (!reconnectionAttempt) {
                     if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(ex.message)
@@ -140,19 +140,19 @@ class HubConnection private constructor(
                 }
             }
         } else {
-            Negotiation(TransportEnum.WebSockets, baseUrl)
+            Negotiation(transport = TransportEnum.WebSockets, url = baseUrl, headers = headers)
         }
 
         if (!::transport.isInitialized) {
-            transport = when (negotiationTransport) {
-                TransportEnum.LongPolling -> LongPollingTransport(headers, httpClient)
-                TransportEnum.ServerSentEvents -> ServerSentEventsTransport(headers, httpClient)
-                else -> WebSocketTransport(headers, httpClient)
+            transport = when (negotiation.transport) {
+                TransportEnum.LongPolling -> LongPollingTransport(negotiation.headers, httpClient)
+                TransportEnum.ServerSentEvents -> ServerSentEventsTransport(negotiation.headers, httpClient)
+                else -> WebSocketTransport(negotiation.headers, httpClient)
             }
         }
 
         try {
-            transport.start(negotiationUrl)
+            transport.start(negotiation.url)
         } catch (ex: Exception) {
             if (!reconnectionAttempt) {
                 if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(ex.message)
@@ -180,7 +180,7 @@ class HubConnection private constructor(
 
         _connectionState.value = HubConnectionState.CONNECTED
 
-        if (negotiationTransport != TransportEnum.LongPolling) {
+        if (negotiation.transport != TransportEnum.LongPolling) {
             scope.launch {
                 pingTicker
                     .catch {
@@ -213,6 +213,7 @@ class HubConnection private constructor(
 
     private suspend fun startNegotiate(
         url: String,
+        headers: Map<String, String>,
         negotiateAttempts: Int,
     ): Negotiation {
         if (connectionState.value != HubConnectionState.CONNECTING && connectionState.value != HubConnectionState.RECONNECTING)
@@ -228,12 +229,13 @@ class HubConnection private constructor(
             is NegotiateResponse.Redirect -> {
                 if (negotiateAttempts >= MAX_NEGOTIATE_ATTEMPTS) throw RuntimeException("Negotiate redirection limit exceeded.")
 
-                response.accessToken?.let { token ->
-                    headers["Authorization"] = "Bearer $token"
-                }
+                val newHeaders = response.accessToken?.let { token ->
+                    headers.toMutableMap().apply { put("Authorization", "Bearer $token") }
+                } ?: headers
 
                 return startNegotiate(
                     url = response.url,
+                    headers = newHeaders,
                     negotiateAttempts = negotiateAttempts + 1,
                 )
             }
@@ -261,6 +263,7 @@ class HubConnection private constructor(
                 return Negotiation(
                     transport = chosenTransport,
                     url = finalUrl,
+                    headers = headers,
                 )
             }
         }

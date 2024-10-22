@@ -12,7 +12,6 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.utils.io.core.toByteArray
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.mapNotNull
@@ -39,8 +38,6 @@ internal class ServerSentEventsTransport(
                 socketTimeoutMillis = Long.MAX_VALUE
             }
         }
-
-        session?.ensureActive()
     }
 
     override fun receive(): Flow<ByteArray> = session?.incoming
