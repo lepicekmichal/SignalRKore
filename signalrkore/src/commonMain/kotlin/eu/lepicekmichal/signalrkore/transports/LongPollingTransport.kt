@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlin.jvm.Volatile
 
 internal class LongPollingTransport(private val headers: Map<String, String>, private val client: HttpClient) : Transport {
 
