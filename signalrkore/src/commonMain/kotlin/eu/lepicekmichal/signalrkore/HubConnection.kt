@@ -363,15 +363,19 @@ class HubConnection private constructor(
 
     override fun sendHubMessage(message: HubMessage) {
         if (connectionState.value != HubConnectionState.CONNECTED) {
-            logger.log(Logger.Severity.ERROR, "Trying to send and message while the connection is not active. ($message)", null)
+            logger.log(Logger.Severity.ERROR, "Trying to send a message while the connection is not active. ($message)", null)
             return
         }
 
         val serializedMessage: ByteArray = protocol.writeMessage(message)
         scope.launch {
-            if (::transport.isInitialized) transport.send(serializedMessage)
-            logger.log(Logger.Severity.INFO, "Sent hub data: $message", null)
-            resetKeepAlive()
+            try {
+                if (::transport.isInitialized) transport.send(serializedMessage)
+                logger.log(Logger.Severity.INFO, "Sent hub data: $message", null)
+                resetKeepAlive()
+            } catch (e: Exception) {
+                logger.log(Logger.Severity.ERROR, "Failed to send hub data: $message", e)
+            }
         }
     }
 
