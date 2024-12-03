@@ -49,7 +49,11 @@ internal class WebSocketTransport(
     }
 
     override suspend fun send(message: ByteArray) {
-        session?.send(message) ?: throw IllegalStateException("WebSocket connection has not been started")
+        try {
+            session?.send(message) ?: throw IllegalStateException("WebSocket connection has not been started")
+        } catch (e: EOFException) {
+            throw IllegalStateException("WebSocket connection has been closed", e)
+        }
     }
 
     override fun receive(): Flow<ByteArray> = session?.incoming
