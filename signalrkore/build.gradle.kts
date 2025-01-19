@@ -17,14 +17,14 @@ kotlin {
 
         compilations.all {
             kotlinOptions {
-                jvmTarget = JavaVersion.VERSION_17.toString()
+                jvmTarget = JavaVersion.VERSION_1_8.toString()
             }
         }
     }
 
     jvm {
         compilations.all {
-            kotlinOptions.jvmTarget = JavaVersion.VERSION_17.toString()
+            kotlinOptions.jvmTarget = JavaVersion.VERSION_1_8.toString()
         }
     }
 
@@ -41,7 +41,7 @@ kotlin {
         }
     }
 
-    jvmToolchain(17)
+    jvmToolchain(8)
 
     sourceSets {
         applyDefaultHierarchyTemplate()
@@ -98,8 +98,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     namespace = "eu.lepicekmichal.signalrkore"
