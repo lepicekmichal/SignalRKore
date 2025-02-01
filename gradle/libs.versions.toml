@@ -1,7 +1,7 @@
 [versions]
-gradle = "8.7.1"
-kotlin = "2.0.21"
-kotlinxCoroutinesTest = "1.8.1"
+gradle = "8.7.3"
+kotlin = "2.1.10"
+kotlinxCoroutinesTest = "1.9.0"
 kotlinxSerializationJson = "1.7.3"
 kotlinxDatetime = "0.6.0"
 ktorClientCore = "3.0.0"
