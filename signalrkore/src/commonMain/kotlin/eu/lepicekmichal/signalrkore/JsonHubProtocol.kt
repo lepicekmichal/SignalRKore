@@ -1,8 +1,6 @@
 package eu.lepicekmichal.signalrkore
 
-import io.ktor.utils.io.core.String
 import io.ktor.utils.io.core.toByteArray
-import io.ktor.utils.io.errors.IOException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -14,19 +12,20 @@ class JsonHubProtocol(private val logger: Logger) : HubProtocol {
     private val json by lazy { Json { ignoreUnknownKeys = true } }
 
     override fun parseMessages(payload: ByteArray): List<HubMessage> {
-        val payloadString = String(payload)
+        val payloadString = payload.decodeToString(0, payload.size)
         if (payloadString.isEmpty()) return emptyList()
         if (payloadString.substring(payloadString.length - 1)[0] != RECORD_SEPARATOR) throw RuntimeException("HubMessage is incomplete.")
 
         return payloadString
             .split(RECORD_SEPARATOR)
             .filter { it.isNotEmpty() }
-            .map { str ->
+            .mapNotNull { str ->
                 try {
                     logger.log(Logger.Severity.INFO, "Decoding message: $str", null)
                     json.decodeFromString(str)
-                } catch (ex: IOException) {
-                    throw RuntimeException("Error reading JSON.", ex)
+                } catch (ex: Exception) {
+                    logger.log(Logger.Severity.ERROR, "Failed to decode message: $str", ex)
+                    null
                 }
             }
     }
