@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
@@ -86,6 +87,9 @@ class HubConnection private constructor(
 
     private val _connectionState: MutableStateFlow<HubConnectionState> = MutableStateFlow(HubConnectionState.DISCONNECTED)
     val connectionState: StateFlow<HubConnectionState> = _connectionState.asStateFlow()
+
+    private val _connectionId: MutableStateFlow<String?> = MutableStateFlow(null)
+    val connectionId: StateFlow<String?> = _connectionId.asStateFlow()
 
     private lateinit var transport: Transport
 
@@ -259,9 +263,9 @@ class HubConnection private constructor(
                     else -> response.selectTransport(transportEnum)
                 } ?: throw RuntimeException("There were no compatible transports on the server.")
 
-                val finalUrl: String = URLBuilder(url).apply {
-                    parameters.append("id", if (response.negotiateVersion > 0) response.connectionToken else response.connectionId)
-                }.buildString()
+                val id = if (response.negotiateVersion > 0) response.connectionToken else response.connectionId
+                _connectionId.update { id }
+                val finalUrl: String = URLBuilder(url).apply { parameters.append("id", id) }.buildString()
 
                 return Negotiation(
                     transport = chosenTransport,
