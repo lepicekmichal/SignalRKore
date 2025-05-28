@@ -124,7 +124,9 @@ class HubConnection private constructor(
         transport?.let { this.transport = it }
     }
 
-    suspend fun start(reconnectionAttempt: Boolean = false) {
+    suspend fun start() = start(reconnectionAttempt = false)
+
+    private suspend fun start(reconnectionAttempt: Boolean = false) {
         if (connectionState.value != HubConnectionState.DISCONNECTED && connectionState.value != HubConnectionState.RECONNECTING) return
 
         if (connectionState.value == HubConnectionState.DISCONNECTED) {
