@@ -22,7 +22,6 @@ jobs:
           pip install mkdocs-material
           pip install mkdocstrings
           pip install mkdocstrings-python
-          pip install mkdocstrings-handlers-python
           pip install mkdocstrings-handlers-kotlin
 
       - name: Build and deploy MkDocs
