@@ -58,8 +58,7 @@ Please see the [documentation](https://lepicekmichal.github.io/SignalRKore/).
 
 ## Acknowledgments
 
-All functionality was possible to implement only thanks to [AzureSignalR ChatRoomLocal sample](https://github.
-com/aspnet/AzureSignalR-samples/tree/main/samples/ChatRoomLocal).
+All functionality was possible to implement only thanks to [AzureSignalR ChatRoomLocal sample](https://github.com/aspnet/AzureSignalR-samples/tree/main/samples/ChatRoomLocal).
 
 ## License
 
