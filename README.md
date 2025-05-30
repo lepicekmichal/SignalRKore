@@ -9,8 +9,20 @@
 ![badge-jvm](http://img.shields.io/badge/platform-jvm-DB413D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-lightgray?style=flat)
 
-SignalRKore is a client library connecting to ASP.NET Core server for real-time functionality. Enables server-side code to push content to
-clients and vice-versa. Instantly.
+## Overview
+
+SignalRKore is a Kotlin Multiplatform client library for ASP.NET Core SignalR. It enables real-time communication between clients and servers, allowing server-side code to push content to clients and vice-versa instantly.
+
+## Features
+
+- **Kotlin Multiplatform**: Supports Android, JVM, and iOS platforms
+- **Coroutines**: Uses Kotlin Coroutines for asynchronous operations
+- **Ktor**: Built on top of Ktor for networking
+- **Kotlinx Serialization**: Uses Kotlinx Serialization for JSON serialization
+- **Multiple Transports**: Supports WebSockets, ServerSentEvents, and LongPolling
+- **Automatic Reconnect**: Provides automatic reconnection functionality
+- **Streams**: Supports streaming data between client and server
+- **Connection Status**: Provides connection status monitoring
 
 ## Why should you use **this** library
 
@@ -30,254 +42,55 @@ clients and vice-versa. Instantly.
 | MsgPack                    |                                      :heavy_check_mark:                                      |      :heavy_multiplication_x:       |
 | Tested by time & community |                                      :heavy_check_mark:                                      |      :heavy_multiplication_x:       |
 
-## Install
+## Quick Example
 
 ```kotlin
-implementation("eu.lepicekmichal.signalrkore:signalrkore:${signalrkoreVersion}")
-```
+// Create a connection
+val connection = HubConnectionBuilder.create("http://localhost:5000/chat")
 
-## Usage
-
-### Create your hub connection
-
-```kotlin
-private val connection: HubConnection = HubConnectionBuilder.create("http://localhost:5000/chat")
-```
-
-### Start your connection
-
-```kotlin
+// Start the connection
 connection.start()
-```
 
-### Send to server
+// Send a message to the server
+connection.send("broadcastMessage", "User", "Hello, SignalR!")
 
-```kotlin
-connection.send("broadcastMessage", "Michal", "Hello")
-// or 
-connection.invoke("broadcastMessage", "Michal", "Hello")
-```
-
-### Receive from server
-
-```kotlin
-connection.on("broadcastMessage", paramType1 = String::class, paramType2 = String::class).collect { (user, message) ->
-    println("User $user is saying: $message")
+// Receive messages from the server
+connection.on("broadcastMessage", String::class, String::class).collect { (user, message) ->
+    println("$user says: $message")
 }
-```
 
-### Receive from server and return result
-
-```kotlin
-connection.on("sneakAttack", paramType1 = Boolean::class, resultType = String::class) { surprise ->
-    if (surprise) "Wow, you got me"
-    else "I saw you waaay from over there"
-}
-```
-
-maximizing shorthand style
-
-```kotlin
-connection.on("sneakAttack") { surprise: Boolean ->
-    if (surprise) "Wow, you got me"
-    else "I saw you waaay from over there"
-}
-```
-
-### Don't forget to stop the connection
-
-```kotlin
+// Don't forget to stop the connection when done
 connection.stop()
 ```
 
-## Send and Receive complex data types
+## Getting Started
 
-```kotlin
-// Serializable class
-@Serializable
-data class Message(
-    val id: String,
-    val author: String,
-    val date: String,
-    val text: String,
-)
+Check out the [Getting Started](getting-started/installation.md) guide to learn how to add SignalRKore to your project and start using it.
 
-// Sending message
-val message = Message(
-    id = UUID.next(),
-    author = "Michal",
-    date = "2022-11-30T21:37:11Z",
-    text = "Hello",
-)
-connection.send("broadcastMessage", message)
+## License
 
-// Receiving messages
-connection.on("broadcastMessage", Message::class).collect { (message) ->
-    println(message.toString())
-}
+SignalRKore is released under the [Apache 2.0 license](https://github.com/lepicekmichal/SignalRKore/blob/main/LICENSE.txt).
+
 ```
+Copyright 2023 Michal Lepicek
 
-## We got streams too
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-```kotlin
-// Receiving
-connection.stream(
-    method = "Counter",
-    itemType = Int::class,
-    arg1 = 10, // up to
-    arg2 = 500, // delay
-).collect {
-    println("Countdown: ${10 - it}")
-}
+    http://www.apache.org/licenses/LICENSE-2.0
 
-// Uploading
-// send, invoke or stream methods
-connection.send("UploadStream", flow<Int> {
-    var data = 0
-    while (data < 10) {
-        emit(++data)
-        delay(500)
-    }
-})
-
-Receiving stream invocation and responding to it is in
-```
-
-## Keep up with connection status
-
-```kotlin
-connection.connectionState.collect {
-    when (it) {
-        HubConnectionState.CONNECTED -> println("Yay, we online")
-        HubConnectionState.DISCONNECTED -> println("Shut off!")
-        HubConnectionState.CONNECTING -> println("Almost there")
-        HubConnectionState.RECONNECTING -> println("Down again")
-    }
-} 
-```
-
-## Connection configuration
-
-```kotlin
-HubConnectionBuilder
-    .create(url) {
-        transportEnum = ...
-        httpClient = ...
-        protocol = ...
-        skipNegotiate = ...
-        automaticReconnect = ...
-        accessToken = ...
-        handshakeResponseTimeout = ...
-        headers = ...
-        json = ...
-        logger = ...
-    }
-```
-
-### Supported transports
-
-1. TransportEnum.All _(default, automatic choice based on availability)_
-2. TransportEnum.WebSockets
-3. TransportEnum.ServerSentEvents
-4. TransportEnum.LongPolling
-
-### Add your own ktor http client
-
-For example one with okhttp engine and its builder containing interceptors
-
-```kotlin
-httpClient = HttpClient(OkHttp) {
-    engine {
-        preconfigured = okHttpBuilder.build()
-    }
-}
-```
-
-But if you do opt-in to pass the http client, make sure it has WebSockets and other plugins installed
-
-```kotlin
-HttpClient {
-    install(WebSockets)
-    install(SSE)
-    install(HttpTimeout)
-    install(ContentNegotiation) { json() }
-}
-```
-
-### You may pass your own HubProtocol
-
-With custom parsing and encoding
-
-```kotlin
-class MyHubProtocol : HubProtocol {
-    fun parseMessages(payload: ByteArray): List<HubMessage> {
-        // your implementation
-    }
-
-    fun writeMessage(message: HubMessage): ByteArray {
-        // your implementation
-    }
-}
-```
-
-### Logs are available
-
-Just decide what to do with the message
-
-```kotlin
-logger = Logger { severity, msg, cause ->
-    Napier.v("SignalRKore is saying: $ms")
-}
-```
-
-### Do not forget your own instance of Json
-
-If your kotlinx-serialization Json is customized or it has modules registered in it, then don't forget to pass it.
-
-### Reconnect if server wants you to
-
-SignalR Core server can send close message with allowReconnect property set to true.   
-Automatic reconnect is not default behaviour, but can be simply set up.
-
-```kotlin
-
-import kotlin.random.Random
-
-/** Default, reconnect turned off **/
-automaticReconnect = AutomaticReconnect.Inactive
-
-/**
- * Basic reconnect policy
- * waits 0、2、10 and 30 seconds before each attempt to reconnect
- * If all four attempts are unsucessful, reconnect is aborted
- */
-automaticReconnect = AutomaticReconnect.Active
-
-/**
- * Extra reconnect policy
- * Each attempt to reconnect is suspended with delay of exponential backoff time
- * In default settings
- *      initially waits 1 second, then 1.5 times more seconds each time
- *      at most 15 tries with highest delay of 60 seconds
- *      all can be adjusted
- */
-automaticReconnect = AutomaticReconnect.exponentialBackoff()
-
-/**
- * Custom reconnect policy
- * You can implement anything you find plausible
- */
-automaticReconnect = AutomaticReconnect.Custom { previousRetryCount, elapsedTime ->
-    // before each attempt wait random time 
-    // but at most only the time that we are already trying to reconnect
-    delay(Random.nextLong(elapsedTime.inWholeMilliseconds))
-}
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 ```
 
 ## TODO list
 
 - [x] Readme
-- [ ] Documentation
+- [x] Documentation
 - [ ] Add example project
 - [x] Fix up ServerSentEvents' http client
 - [x] Add logging
