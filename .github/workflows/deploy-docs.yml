@@ -22,7 +22,7 @@ jobs:
           pip install mkdocs-material
           pip install mkdocstrings
           pip install mkdocstrings-python
-          pip install mkdocstrings-handlers-kotlin
+          pip install "mkdocstrings[kotlin]"
 
       - name: Build and deploy MkDocs
         run: mkdocs gh-deploy --force
