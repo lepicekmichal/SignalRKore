@@ -89,8 +89,10 @@ headers = mapOf(
 You can provide an access token for authentication:
 
 ```kotlin
-accessToken = { "your-access-token" }
+accessToken = "your-access-token"
 ```
+
+This is a convenience property that sets the "Authorization" header with a "Bearer" prefix.
 
 ### HTTP Client
 
@@ -159,8 +161,8 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
     skipNegotiate = true
     automaticReconnect = AutomaticReconnect.Active
     handshakeResponseTimeout = 30.seconds
-    headers = mapOf("Authorization" to "Bearer token")
-    accessToken = { "your-access-token" }
+    headers = mapOf("Custom-Header" to "Value")
+    accessToken = "your-access-token"
     httpClient = HttpClient {
         install(WebSockets)
         install(SSE)
@@ -199,7 +201,7 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 | `automaticReconnect` | `AutomaticReconnect` | `AutomaticReconnect.Inactive` | The automatic reconnect policy |
 | `handshakeResponseTimeout` | `Duration` | `15.seconds` | The timeout for the handshake response |
 | `headers` | `Map<String, String>` | `emptyMap()` | HTTP headers to include in requests |
-| `accessToken` | `suspend () -> String?` | `null` | Function that returns an access token for authentication |
+| `accessToken` | `String?` | `null` | Access token for authentication (sets the "Authorization" header with "Bearer" prefix) |
 | `httpClient` | `HttpClient?` | `null` | Custom Ktor HTTP client |
 | `protocol` | `HubProtocol` | `JsonHubProtocol()` | The protocol used for communication with the hub |
 | `json` | `Json` | `Json { ignoreUnknownKeys = true }` | JSON serializer |

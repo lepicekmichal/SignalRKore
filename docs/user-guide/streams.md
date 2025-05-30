@@ -19,14 +19,12 @@ The `stream` method allows you to receive a stream of data from the hub. It retu
 
 ```kotlin
 // Receive a stream of integers
-connection.stream("counter", Int::class, 10, 1000).collect { count ->
+connection.stream("counter", Int::class).collect { count ->
     println("Received count: $count")
 }
 ```
 
-The first parameter is the name of the hub method to call, the second parameter is the type of items in the stream, followed by any parameters to pass to the method.
-
-In this example, we're calling a hub method named "counter" that returns a stream of integers. We're passing two parameters: 10 (the number of items to stream) and 1000 (the delay between items in milliseconds).
+The first parameter is the name of the hub method to call, and the second parameter is the type of items in the stream. This is the most basic form of receiving a stream from the hub.
 
 ### Stream Parameters
 
@@ -136,17 +134,13 @@ connection.send("uploadDataPoints", dataStream)
 
 ### Stream Completion
 
-The stream completes when the Flow completes or when an error occurs:
+The stream completes when the Flow completes:
 
 ```kotlin
 val dataStream = flow {
-    try {
-        for (i in 1..10) {
-            emit(i)
-            delay(1000)
-        }
-    } catch (ex: Exception) {
-        println("Stream error: ${ex.message}")
+    for (i in 1..10) {
+        emit(i)
+        delay(1000)
     }
 }
 
@@ -208,7 +202,7 @@ scope.launch {
     try {
         connection.start()
         println("Connection started successfully")
-        
+
         // Receive a stream
         launch {
             connection.stream("counter", Int::class, 10, 1000)
@@ -219,7 +213,7 @@ scope.launch {
                     println("Received count: $count")
                 }
         }
-        
+
         // Send a stream
         val dataStream = flow {
             for (i in 1..10) {
@@ -227,9 +221,9 @@ scope.launch {
                 delay(1000)
             }
         }
-        
+
         connection.send("uploadStream", dataStream)
-        
+
         // Keep the connection open
         delay(Long.MAX_VALUE)
     } catch (ex: Exception) {

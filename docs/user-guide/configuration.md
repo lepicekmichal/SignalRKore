@@ -59,20 +59,16 @@ headers = mapOf(
 You can provide an access token for authentication:
 
 ```kotlin
-accessToken = { "your-access-token" }
+accessToken = "your-access-token"
 ```
 
-This is useful for JWT authentication. The function is called every time a new HTTP request is made, allowing you to provide a fresh token if needed.
-
-You can also make the function suspending to fetch a token asynchronously:
+This is a convenience property that sets the "Authorization" header with a "Bearer" prefix. It's equivalent to:
 
 ```kotlin
-accessToken = {
-    // Fetch a token asynchronously
-    val token = fetchTokenAsync()
-    token
-}
+headers["Authorization"] = "Bearer your-access-token"
 ```
+
+This is useful for JWT authentication.
 
 ## Timeout and Reconnection
 
@@ -110,6 +106,14 @@ httpClient = HttpClient {
 ```
 
 This is useful if you need to configure the HTTP client with custom settings or plugins.
+
+> **Warning:** If you provide a custom HTTP client, you must install all the necessary plugins. At a minimum, you need to install:
+> - `WebSockets` - Required for WebSockets transport
+> - `SSE` - Required for Server-Sent Events transport
+> - `HttpTimeout` - Required for timeout handling
+> - `ContentNegotiation` with JSON - Required for serialization
+>
+> Failure to install these plugins may result in runtime errors.
 
 ### OkHttp Engine
 
@@ -193,9 +197,24 @@ logger = Logger { severity, message, cause ->
 
 You can integrate with popular logging frameworks:
 
-#### SLF4J
+#### Napier (Multiplatform)
 
 ```kotlin
+logger = Logger { severity, message, cause ->
+    when (severity) {
+        Logger.Severity.INFO -> Napier.i(message)
+        Logger.Severity.WARNING -> Napier.w(message)
+        Logger.Severity.ERROR -> Napier.e(cause, message)
+    }
+}
+```
+
+#### Other Logging Frameworks
+
+For other logging frameworks like SLF4J or Timber, you can use a similar approach:
+
+```kotlin
+// SLF4J
 logger = Logger { severity, message, cause ->
     val logger = LoggerFactory.getLogger("SignalRKore")
     when (severity) {
@@ -204,11 +223,8 @@ logger = Logger { severity, message, cause ->
         Logger.Severity.ERROR -> logger.error(message, cause)
     }
 }
-```
 
-#### Timber (Android)
-
-```kotlin
+// Timber (Android)
 logger = Logger { severity, message, cause ->
     when (severity) {
         Logger.Severity.INFO -> Timber.i(message)
@@ -227,15 +243,15 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
     // Transport options
     transportEnum = TransportEnum.WebSockets
     skipNegotiate = true
-    
+
     // Authentication and headers
-    headers = mapOf("Authorization" to "Bearer token")
-    accessToken = { "your-access-token" }
-    
+    headers = mapOf("Custom-Header" to "Value")
+    accessToken = "your-access-token"
+
     // Timeout and reconnection
     handshakeResponseTimeout = 30.seconds
     automaticReconnect = AutomaticReconnect.exponentialBackoff()
-    
+
     // HTTP client
     httpClient = HttpClient {
         install(WebSockets)
@@ -243,14 +259,14 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
         install(HttpTimeout)
         install(ContentNegotiation) { json() }
     }
-    
+
     // Protocol and serialization
     protocol = JsonHubProtocol()
     json = Json {
         ignoreUnknownKeys = true
         isLenient = true
     }
-    
+
     // Logging
     logger = Logger { severity, message, cause ->
         when (severity) {

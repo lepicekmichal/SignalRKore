@@ -131,10 +131,16 @@ headers = mapOf(
 You can provide an access token for authentication:
 
 ```kotlin
-accessToken = { "your-access-token" }
+accessToken = "your-access-token"
 ```
 
-This is useful for JWT authentication. The function is called every time a new HTTP request is made, allowing you to provide a fresh token if needed.
+This is a convenience property that sets the "Authorization" header with a "Bearer" prefix. It's equivalent to:
+
+```kotlin
+headers["Authorization"] = "Bearer your-access-token"
+```
+
+This is useful for JWT authentication.
 
 ### Handshake Response Timeout
 
@@ -223,9 +229,9 @@ scope.launch {
     try {
         connection.start()
         println("Connection started successfully")
-        
+
         // Do something with the connection
-        
+
         // Stop the connection when done
         connection.stop()
     } catch (ex: Exception) {
