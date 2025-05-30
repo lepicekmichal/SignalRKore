@@ -1,6 +1,6 @@
 site_name: SignalRKore
 site_description: Kotlin Multiplatform client library for ASP.NET Core SignalR
-site_author: Michal Lepicek
+site_author: Michal Lepíček
 site_url: https://lepicekmichal.github.io/SignalRKore/
 repo_name: lepicekmichal/SignalRKore
 repo_url: https://github.com/lepicekmichal/SignalRKore
@@ -9,8 +9,8 @@ edit_uri: edit/main/docs/
 theme:
   name: material
   palette:
-    primary: indigo
-    accent: indigo
+    primary: teal
+    accent: teal
   features:
     - navigation.tabs
     - navigation.expand
@@ -49,5 +49,3 @@ nav:
     - HubConnectionBuilder: api/hub-connection-builder.md
     - Transport: api/transport.md
     - Protocol: api/protocol.md
-  - Examples: examples.md
-  - Changelog: changelog.md

@@ -23,23 +23,6 @@ SignalRKore is a Kotlin Multiplatform client library for ASP.NET Core SignalR. I
 - **Streams**: Supports streaming data between client and server
 - **Connection Status**: Provides connection status monitoring
 
-## Why SignalRKore?
-
-|                            | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) |             SignalRKore             |
-|:---------------------------|:--------------------------------------------------------------------------------------------:|:-----------------------------------:|
-| Written in                 |                                             Java                                             |               Kotlin                |
-| KMM / KMP                  |                                   :heavy_multiplication_x:                                   |          Android, JVM, iOS          |
-| Network                    |                                         OkHttp only                                          |                Ktor                 |
-| Async                      |                                            RxJava                                            |             Coroutines              |
-| Serialization              |                                   Gson (non-customizable)                                    | Kotlinx Serializable (customizable) |
-| Streams                    |                                      :heavy_check_mark:                                      |         :heavy_check_mark:          |
-| Transport fallback         |                                   :heavy_multiplication_x:                                   |      :heavy_multiplication_x:       |
-| Automatic reconnect        |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
-| SSE                        |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
-| Connection status          |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
-| Logging                    |                                            SLF4J                                             |          Custom interface           |
-| MsgPack                    |                                      :heavy_check_mark:                                      |      :heavy_multiplication_x:       |
-
 ## Quick Example
 
 ```kotlin

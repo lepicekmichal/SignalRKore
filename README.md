@@ -13,17 +13,6 @@
 
 SignalRKore is a Kotlin Multiplatform client library for ASP.NET Core SignalR. It enables real-time communication between clients and servers, allowing server-side code to push content to clients and vice-versa instantly.
 
-## Features
-
-- **Kotlin Multiplatform**: Supports Android, JVM, and iOS platforms
-- **Coroutines**: Uses Kotlin Coroutines for asynchronous operations
-- **Ktor**: Built on top of Ktor for networking
-- **Kotlinx Serialization**: Uses Kotlinx Serialization for JSON serialization
-- **Multiple Transports**: Supports WebSockets, ServerSentEvents, and LongPolling
-- **Automatic Reconnect**: Provides automatic reconnection functionality
-- **Streams**: Supports streaming data between client and server
-- **Connection Status**: Provides connection status monitoring
-
 ## Why should you use **this** library
 
 |                            | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) |             SignalRKore             |
@@ -63,29 +52,18 @@ connection.on("broadcastMessage", String::class, String::class).collect { (user,
 connection.stop()
 ```
 
-## Getting Started
+## How to use
 
-Check out the [Getting Started](getting-started/installation.md) guide to learn how to add SignalRKore to your project and start using it.
+Please see the [documentation](https://lepicekmichal.github.io/SignalRKore/).
+
+## Acknowledgments
+
+All functionality was possible to implement only thanks to [AzureSignalR ChatRoomLocal sample](https://github.
+com/aspnet/AzureSignalR-samples/tree/main/samples/ChatRoomLocal).
 
 ## License
 
 SignalRKore is released under the [Apache 2.0 license](https://github.com/lepicekmichal/SignalRKore/blob/main/LICENSE.txt).
-
-```
-Copyright 2023 Michal Lepicek
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
 
 ## TODO list
 
@@ -103,5 +81,28 @@ limitations under the License.
 - [x] Implement automatic reconnect
 - [ ] Reacting to stream invocation from server
 
-> All functionality was possible to implement only thanks
-> to [AzureSignalR ChatRoomLocal sample](https://github.com/aspnet/AzureSignalR-samples/tree/main/samples/ChatRoomLocal)
+## Documentation
+
+The documentation is available on GitHub Pages. To view it:
+
+1. **Trigger the GitHub Actions workflow to create the gh-pages branch:**
+   - The gh-pages branch is created automatically by the GitHub Actions workflow
+   - The workflow runs when changes are pushed to the main branch
+   - You can check the status of the workflow in the "Actions" tab of your repository
+   - If the workflow hasn't run yet, you can trigger it manually by:
+     - Making a small change to any file and pushing it to the main branch, or
+     - Going to the "Actions" tab, selecting the "Deploy MkDocs to GitHub Pages" workflow, and clicking "Run workflow"
+
+2. **Enable GitHub Pages for your repository:**
+   - After the workflow has run successfully and created the gh-pages branch
+   - Go to your repository on GitHub
+   - Click on "Settings"
+   - Scroll down to the "GitHub Pages" section
+   - Under "Source", select "Deploy from a branch"
+   - Under "Branch", select "gh-pages" and "/ (root)" folder
+   - Click "Save"
+
+3. **Access the documentation:**
+   - Once GitHub Pages is enabled, the documentation will be available at:
+   - `https://[your-github-username].github.io/SignalRKore/`
+   - For example: `https://lepicekmichal.github.io/SignalRKore/`
