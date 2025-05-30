@@ -45,6 +45,32 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
+/**
+ * The main class for connecting to a SignalR hub.
+ *
+ * HubConnection provides methods for starting and stopping the connection,
+ * sending and receiving messages, and monitoring the connection status.
+ *
+ * This class is not instantiated directly. Use [HubConnectionBuilder] to create instances.
+ *
+ * Example:
+ * ```
+ * val connection = HubConnectionBuilder.create("https://example.com/chathub")
+ * connection.start()
+ * connection.send("broadcastMessage", "User", "Hello, SignalR!")
+ * connection.stop()
+ * ```
+ *
+ * @property baseUrl The URL of the SignalR hub
+ * @property protocol The protocol used for communication with the hub
+ * @property httpClient The HTTP client used for communication
+ * @property transportEnum The transport type to use for communication
+ * @property handshakeResponseTimeout The timeout for handshake response
+ * @property headers HTTP headers to include in requests
+ * @property skipNegotiate Whether to skip the negotiate step (WebSockets only)
+ * @property automaticReconnect The automatic reconnect policy
+ * @property logger The logger for logging messages
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class HubConnection private constructor(
     private val baseUrl: String,

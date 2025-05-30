@@ -8,6 +8,8 @@ ktorClientCore = "3.0.0"
 okhttp = "4.12.0"
 okio = "3.9.1"
 vanniktech = "0.30.0"
+dokka = "1.9.20"
+mkdocs = "0.13.2"
 
 [libraries]
 gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
@@ -32,3 +34,5 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 vanniktech-publish = { id = "com.vanniktech.maven.publish.base", version.ref = "vanniktech" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+dokka-mkdocs = { id = "org.jetbrains.dokka.mkdocs", version.ref = "mkdocs" }

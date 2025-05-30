@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.vanniktech.publish)
+    alias(libs.plugins.dokka)
 }
 
 group = requireNotNull(project.findProperty("GROUP"))
@@ -122,4 +123,20 @@ tasks.register<HubCommunicationTask>("HubCommunicationGeneration") {
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     dependsOn += tasks["HubCommunicationGeneration"]
+}
+
+tasks.dokkaHtml {
+    outputDirectory.set(layout.buildDirectory.dir("dokka"))
+
+    dokkaSourceSets {
+        configureEach {
+            includes.from("Module.md")
+
+            sourceLink {
+                localDirectory.set(file("src"))
+                remoteUrl.set(uri("https://github.com/lepicekmichal/SignalRKore/tree/main/signalrkore/src").toURL())
+                remoteLineSuffix.set("#L")
+            }
+        }
+    }
 }
