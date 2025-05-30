@@ -31,20 +31,6 @@ markdown_extensions:
 
 plugins:
   - search
-  - mkdocstrings:
-      handlers:
-        kotlin:
-          setup_commands:
-            - import kotlin.time.Duration
-          selection:
-            inherited_members: true
-            filters:
-              public: true
-              private: false
-              protected: false
-              internal: false
-          rendering:
-            member_order: source
 
 nav:
   - Home: index.md
