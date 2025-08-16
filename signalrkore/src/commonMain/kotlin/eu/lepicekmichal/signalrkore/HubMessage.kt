@@ -131,7 +131,7 @@ sealed class HubMessage {
                     else -> Completion.Simple.serializer()
                 }
 
-                else -> error("unknown type $type")
+                else -> error("Unknown type ($type) when deserializing SignalR structure: $element")
             }
         }
     }

@@ -1,5 +1,6 @@
 import eu.lepicekmichal.signalrkore.HubCommunicationTask
 import org.gradle.internal.os.OperatingSystem
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.library)
@@ -16,18 +17,14 @@ kotlin {
     androidTarget {
         publishLibraryVariants("release")
 
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = JavaVersion.VERSION_1_8.toString()
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
+            compilerOptions {
+                jvmTarget.set(JvmTarget.JVM_1_8)
             }
         }
     }
 
-    jvm {
-        compilations.all {
-            kotlinOptions.jvmTarget = JavaVersion.VERSION_1_8.toString()
-        }
-    }
+    jvm()
 
     if (OperatingSystem.current().isMacOsX) {
         listOf(
@@ -50,6 +47,7 @@ kotlin {
         all {
             languageSettings {
                 optIn("kotlin.RequiresOptIn")
+                optIn("kotlin.time.ExperimentalTime")
             }
         }
 
@@ -108,7 +106,7 @@ android {
 
 mavenPublishing {
     pomFromGradleProperties()
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.S01)
+    publishToMavenCentral()
     signAllPublications()
     configure(
         com.vanniktech.maven.publish.KotlinMultiplatform(
