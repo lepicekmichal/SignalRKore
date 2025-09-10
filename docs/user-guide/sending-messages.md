@@ -34,11 +34,11 @@ The `invoke` method sends a message to the hub and expects a response:
 
 ```kotlin
 // Invoke a method and get the result
-val result = connection.invoke("echo", String::class, "Hello, SignalR!")
+val result = connection.invoke("echo", String.serializer(), "Hello, SignalR!")
 println("Server responded: $result")
 
 // Invoke a method with multiple parameters
-val sum = connection.invoke("add", Int::class, 5, 10)
+val sum = connection.invoke("add", Int.serializer(), 5, 10)
 println("Sum: $sum")
 ```
 
@@ -66,7 +66,7 @@ val message = ChatMessage(
 connection.send("sendMessage", message)
 
 // Invoke a method with a complex type
-val response = connection.invoke("echoMessage", ChatMessage::class, message)
+val response = connection.invoke("echoMessage", ChatMessage.serializer(), message)
 println("Server echoed: ${response.message}")
 ```
 
@@ -158,7 +158,7 @@ scope.launch {
         connection.send("broadcastMessage", "User", "Hello, SignalR!")
 
         // Invoke a method and get the result
-        val result = connection.invoke("echo", String::class, "Hello, SignalR!")
+        val result = connection.invoke("echo", String.serializer(), "Hello, SignalR!")
         println("Server responded: $result")
 
         // Send a complex type

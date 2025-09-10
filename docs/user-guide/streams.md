@@ -19,7 +19,7 @@ The `stream` method allows you to receive a stream of data from the hub. It retu
 
 ```kotlin
 // Receive a stream of integers
-connection.stream("counter", Int::class).collect { count ->
+connection.stream("counter", Int.serializer()).collect { count ->
     println("Received count: $count")
 }
 ```
@@ -32,7 +32,7 @@ You can pass parameters to the stream method:
 
 ```kotlin
 // Stream with parameters
-connection.stream("generateNumbers", Int::class, 1, 10, 500).collect { number ->
+connection.stream("generateNumbers", Int.serializer(), 1, 10, 500).collect { number ->
     println("Received number: $number")
 }
 ```
@@ -52,7 +52,7 @@ data class StockPrice(
 )
 
 // Receive a stream of stock prices
-connection.stream("stockPrices", StockPrice::class, "AAPL", "MSFT", "GOOG").collect { price ->
+connection.stream("stockPrices", StockPrice.serializer(), "AAPL", "MSFT", "GOOG").collect { price ->
     println("${price.symbol}: ${price.price} at ${price.timestamp}")
 }
 ```
@@ -64,7 +64,7 @@ Note that complex types must be annotated with `@Serializable` from the Kotlinx 
 The stream completes when the server completes the stream or when an error occurs:
 
 ```kotlin
-connection.stream("counter", Int::class, 10, 1000)
+connection.stream("counter", Int.serializer(), 10, 1000)
     .catch { ex ->
         println("Stream error: ${ex.message}")
     }
@@ -79,7 +79,7 @@ You can cancel a stream by cancelling the coroutine job:
 
 ```kotlin
 val job = scope.launch {
-    connection.stream("counter", Int::class, 10, 1000).collect { count ->
+    connection.stream("counter", Int.serializer(), 10, 1000).collect { count ->
         println("Received count: $count")
     }
 }
@@ -153,7 +153,7 @@ When working with streams, you should handle potential errors:
 
 ```kotlin
 // Receiving streams
-connection.stream("counter", Int::class, 10, 1000)
+connection.stream("counter", Int.serializer(), 10, 1000)
     .catch { ex ->
         println("Stream error: ${ex.message}")
     }
@@ -205,7 +205,7 @@ scope.launch {
 
         // Receive a stream
         launch {
-            connection.stream("counter", Int::class, 10, 1000)
+            connection.stream("counter", Int.serializer(), 10, 1000)
                 .catch { ex ->
                     println("Stream error: ${ex.message}")
                 }

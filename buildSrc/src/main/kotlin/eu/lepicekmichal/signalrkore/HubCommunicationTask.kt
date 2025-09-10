@@ -1,6 +1,7 @@
 package eu.lepicekmichal.signalrkore
 
 import com.squareup.kotlinpoet.AnnotationSpec
+import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
@@ -12,12 +13,12 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.asTypeName
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.JsonElement
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.Directory
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskAction
-import kotlin.reflect.KClass
 
 open class HubCommunicationTask : DefaultTask() {
 
@@ -33,23 +34,29 @@ open class HubCommunicationTask : DefaultTask() {
                 packageName = "kotlinx.coroutines.flow",
                 "map",
             )
+            .addImport("kotlinx.serialization", "serializer")
             .addType(
                 TypeSpec.classBuilder("HubCommunication")
+                    .addAnnotation(
+                        AnnotationSpec.builder(ClassName.bestGuess("kotlin.OptIn"))
+                            .addMember("kotlinx.serialization.InternalSerializationApi::class")
+                            .build()
+                    )
                     .addModifiers(KModifier.ABSTRACT)
                     .addFunction(
                         FunSpec.builder("toJson")
                             .addTypeVariable(genericTypeVariableT)
                             .receiver(genericTypeVariableT)
-                            .addParameter("kClass", genericTypeVariableT.inKClass)
+                            .addParameter("serializer", genericTypeVariableT.inKSerializer)
                             .addModifiers(KModifier.PROTECTED, KModifier.ABSTRACT)
                             .returns(JsonElement::class)
                             .build()
                     )
                     .addFunction(
                         FunSpec.builder("fromJson")
-                            .addTypeVariable(genericTypeVariableT)
+                            .addTypeVariable(genericTypeVariableT.copy(bounds = emptyList()))
                             .receiver(JsonElement::class)
-                            .addParameter("kClass", genericTypeVariableT.inKClass)
+                            .addParameter("deserializer", genericTypeVariableT.inKSerializer)
                             .addModifiers(KModifier.PROTECTED, KModifier.ABSTRACT)
                             .returns(genericTypeVariableT)
                             .build()
@@ -92,7 +99,7 @@ open class HubCommunicationTask : DefaultTask() {
                         FunSpec.builder("invoke")
                             .addTypeVariable(genericTypeVariableT)
                             .addParameter("method", String::class)
-                            .addParameter("resultType", genericTypeVariableT.inKClass)
+                            .addParameter("resultSerializer", genericTypeVariableT.inKSerializer)
                             .addParameter(name = "args", type = List::class.asTypeName().parameterizedBy(JsonElement::class.asTypeName()))
                             .addParameter(
                                 parameterSpec = ParameterSpec.builder(
@@ -112,7 +119,7 @@ open class HubCommunicationTask : DefaultTask() {
                         FunSpec.builder("stream")
                             .addTypeVariable(genericTypeVariableT)
                             .addParameter("method", String::class)
-                            .addParameter("itemType", genericTypeVariableT.inKClass)
+                            .addParameter("itemSerializer", genericTypeVariableT.inKSerializer)
                             .addParameter(name = "args", type = List::class.asTypeName().parameterizedBy(JsonElement::class.asTypeName()))
                             .addParameter(
                                 parameterSpec = ParameterSpec.builder(
@@ -132,7 +139,7 @@ open class HubCommunicationTask : DefaultTask() {
                         FunSpec.builder("handleIncomingInvocation")
                             .addTypeVariable(genericTypeVariableT)
                             .receiver(Flow::class.asTypeName().parameterizedBy(TypeVariableName(name = "HubMessage.Invocation")))
-                            .addParameter(name = "resultType", type = genericTypeVariableT.inKClass)
+                            .addParameter(name = "resultSerializer", type = genericTypeVariableT.inKSerializer)
                             .addParameter(
                                 name = "callback",
                                 type = LambdaTypeName
@@ -199,7 +206,7 @@ open class HubCommunicationTask : DefaultTask() {
 
     private fun TypeSpec.Builder.addSends(reified: Boolean): TypeSpec.Builder {
         return this.apply {
-            argsAndStreamsCombination(reifiedParameters = reified) { argumentTypes, streamTypes ->
+            argsAndStreamsCombination(reifiedParameters = reified, bounded = true) { argumentTypes, streamTypes ->
                 if (reified && argumentTypes.isEmpty() && streamTypes.isEmpty()) return@argsAndStreamsCombination
 
                 addOutFunction(
@@ -216,7 +223,7 @@ open class HubCommunicationTask : DefaultTask() {
 
     private fun TypeSpec.Builder.addInvokes(reified: Boolean): TypeSpec.Builder {
         return this.apply {
-            argsAndStreamsCombination(reifiedParameters = reified) { argumentTypes, streamTypes ->
+            argsAndStreamsCombination(reifiedParameters = reified, bounded = true) { argumentTypes, streamTypes ->
                 if (reified && argumentTypes.isEmpty() && streamTypes.isEmpty()) return@argsAndStreamsCombination
 
                 addOutFunction(
@@ -233,7 +240,7 @@ open class HubCommunicationTask : DefaultTask() {
 
     private fun TypeSpec.Builder.addResultedInvokes(reified: Boolean): TypeSpec.Builder {
         return this.apply {
-            argsAndStreamsCombination(reifiedParameters = reified) { argumentTypes, streamTypes ->
+            argsAndStreamsCombination(reifiedParameters = reified, bounded = true) { argumentTypes, streamTypes ->
                 if (reified && argumentTypes.isEmpty() && streamTypes.isEmpty()) return@argsAndStreamsCombination
 
                 addOutFunction(
@@ -251,7 +258,7 @@ open class HubCommunicationTask : DefaultTask() {
 
     private fun TypeSpec.Builder.addOns(): TypeSpec.Builder {
         return this.apply {
-            paramsCombination(reifiedParameters = false) { paramTypes ->
+            paramsCombination(reifiedParameters = false, bounded = false) { paramTypes ->
                 addInFunction2(
                     name = "on",
                     modifiers = emptyList(),
@@ -280,7 +287,7 @@ open class HubCommunicationTask : DefaultTask() {
                                 if (paramTypes.isNotEmpty()) "|      OnValue${paramTypes.size}(" else ""
                             }
                             ${
-                                paramTypes.passingInTypedParameters("param")
+                                paramTypes.passingInTypedParameters("deserializer")
                             }
                             ${
                                 if (paramTypes.isNotEmpty()) "|      )" else ""
@@ -298,7 +305,7 @@ open class HubCommunicationTask : DefaultTask() {
         return this.apply {
             val resultTypeVariable = TypeVariableName(name = "RESULT", bounds = listOf(Any::class)).copy(reified = reified)
 
-            paramsCombination(reifiedParameters = reified) { paramTypes ->
+            paramsCombination(reifiedParameters = reified, bounded = true) { paramTypes ->
                 addInFunction2(
                     name = "on",
                     jvmName = "onWithResult",
@@ -307,7 +314,7 @@ open class HubCommunicationTask : DefaultTask() {
                     paramTypes = paramTypes,
                     extraTypeVariables = listOf(resultTypeVariable),
                     extraParameters = listOfNotNull(
-                        if (!reified) ParameterSpec("resultType", resultTypeVariable.inKClass) else null,
+                        if (!reified) ParameterSpec("resultSerializer", resultTypeVariable.inKSerializer) else null,
                         ParameterSpec(
                             name = "callback",
                             type = LambdaTypeName.get(
@@ -330,10 +337,10 @@ open class HubCommunicationTask : DefaultTask() {
                                     format = "%L",
                                     """
                                     |   .handleIncomingInvocation(
-                                    |       resultType = resultType,
+                                    |       resultSerializer = resultSerializer,
                                     |       callback = {
                                     |           callback(
-                                    |              ${paramTypes.passingInTypedParameters("param")}
+                                    |              ${paramTypes.passingInTypedParameters("deserializer")}
                                     |           )
                                     |       },
                                     |   )
@@ -345,8 +352,8 @@ open class HubCommunicationTask : DefaultTask() {
                                 """
                                 |on(
                                 |    target = target,
-                                |    resultType = ${resultTypeVariable.name}::class,
-                                |    ${paramTypes.passingInReifiedParameters("param")}
+                                |    resultSerializer = ${resultTypeVariable.name}::class.serializer(),
+                                |    ${paramTypes.passingInReifiedParameters("deserializer")}
                                 |    callback = callback,
                                 |)                                        
                                 |""".trimMargin(),
@@ -362,7 +369,7 @@ open class HubCommunicationTask : DefaultTask() {
         return this.apply {
             val itemTypeVariable = TypeVariableName(name = "ITEM", bounds = listOf(Any::class))
 
-            argsAndStreamsCombination(reifiedParameters = reified) { argumentTypes, streamTypes ->
+            argsAndStreamsCombination(reifiedParameters = reified, bounded = true) { argumentTypes, streamTypes ->
                 if (reified && argumentTypes.isEmpty() && streamTypes.isEmpty()) return@argsAndStreamsCombination
 
                 addInFunction(
@@ -372,7 +379,7 @@ open class HubCommunicationTask : DefaultTask() {
                     argumentTypes = argumentTypes,
                     streamTypes = streamTypes,
                     extraTypeVariables = listOf(itemTypeVariable),
-                    extraParameters = listOf(ParameterSpec("itemType", itemTypeVariable.inKClass)),
+                    extraParameters = listOf(ParameterSpec("itemSerializer", itemTypeVariable.inKSerializer)),
                     returns = Flow::class.asTypeName().parameterizedBy(itemTypeVariable),
                 )
             }
@@ -411,8 +418,8 @@ open class HubCommunicationTask : DefaultTask() {
                             ).build(),
                             if (!hasReifiedTypes) {
                                 ParameterSpec.builder(
-                                    name = "argType${index + 1}",
-                                    type = argumentType.inKClass,
+                                    name = "argSerializer${index + 1}",
+                                    type = argumentType.inKSerializer,
                                 ).build()
                             } else null,
                         )
@@ -427,21 +434,21 @@ open class HubCommunicationTask : DefaultTask() {
                             ).build(),
                             if (!hasReifiedTypes) {
                                 ParameterSpec.builder(
-                                    name = "streamType${index + 1}",
-                                    type = streamType.inKClass,
+                                    name = "streamSerializer${index + 1}",
+                                    type = streamType.inKSerializer,
                                 ).build()
                             } else null,
                         )
                     }
                 )
-                .addParameters(if (withResultType) listOf(ParameterSpec("resultType", resultTypeVariable.inKClass)) else emptyList())
+                .addParameters(if (withResultType) listOf(ParameterSpec("resultSerializer", resultTypeVariable.inKSerializer)) else emptyList())
                 .returns(if (withResultType) resultTypeVariable else Unit::class.asTypeName())
                 .addStatement(
                     """
                     |return $name(
                     |    method = method,
                     ${
-                        if (withResultType) "|    resultType = resultType," else ""
+                        if (withResultType) "|    resultSerializer = resultSerializer," else ""
                     }
                     ${
                         if (hasReifiedTypes) argumentTypes.passingInReifiedArguments("arg")
@@ -491,8 +498,8 @@ open class HubCommunicationTask : DefaultTask() {
                             ).build(),
                             if (!hasReifiedTypes) {
                                 ParameterSpec.builder(
-                                    name = "argType${index + 1}",
-                                    type = argumentType.inKClass,
+                                    name = "argSerializer${index + 1}",
+                                    type = argumentType.inKSerializer,
                                 ).build()
                             } else null,
                         )
@@ -507,8 +514,8 @@ open class HubCommunicationTask : DefaultTask() {
                             ).build(),
                             if (!hasReifiedTypes) {
                                 ParameterSpec.builder(
-                                    name = "streamType${index + 1}",
-                                    type = streamType.inKClass,
+                                    name = "streamSerializer${index + 1}",
+                                    type = streamType.inKSerializer,
                                 ).build()
                             } else null,
                         )
@@ -519,7 +526,7 @@ open class HubCommunicationTask : DefaultTask() {
                     """
                     |return $name(
                     |    method = method,
-                    |    itemType = itemType,
+                    |    itemSerializer = itemSerializer,
                     ${
                         if (hasReifiedTypes) argumentTypes.passingInReifiedArguments("arg")
                         else argumentTypes.passingInTypedArguments("arg") { arg, type -> "$arg.toJson($type)" }
@@ -560,8 +567,8 @@ open class HubCommunicationTask : DefaultTask() {
                 .addParameters(
                     if (!hasReifiedTypes) paramTypes.mapIndexed { index, argumentType ->
                         ParameterSpec.builder(
-                            name = "paramType${index + 1}",
-                            type = argumentType.inKClass,
+                            name = "deserializer${index + 1}",
+                            type = argumentType.inKSerializer,
                         ).build()
                     } else emptyList(),
                 )
@@ -582,7 +589,7 @@ open class HubCommunicationTask : DefaultTask() {
             } else {
                 appendLine("|    ${name}s = listOf(")
                 this@passingInTypedArguments.indices.forEach { index ->
-                    appendLine("|        ${passedValue("$name${index + 1}", "${name}Type${index + 1}")},")
+                    appendLine("|        ${passedValue("$name${index + 1}", "${name}Serializer${index + 1}")},")
                 }
                 appendLine("|    ),")
             }
@@ -592,7 +599,7 @@ open class HubCommunicationTask : DefaultTask() {
         name: String,
     ): String = buildString {
         this@passingInTypedParameters.indices.forEach { index ->
-            appendLine("it.arguments[$index].fromJson(${name}Type${index + 1}),")
+            appendLine("it.arguments[$index].fromJson(${name}${index + 1}),")
         }
     }
 
@@ -601,7 +608,7 @@ open class HubCommunicationTask : DefaultTask() {
     ): String = buildString {
         this@passingInReifiedArguments.forEachIndexed { index, parameter ->
             appendLine("$name${index + 1} = $name${index + 1},")
-            appendLine("${name}Type${index + 1} = ${parameter.name}::class,")
+            appendLine("${name}Serializer${index + 1} = ${parameter.name}::class.serializer(),")
         }
     }
 
@@ -609,16 +616,17 @@ open class HubCommunicationTask : DefaultTask() {
         name: String,
     ): String = buildString {
         this@passingInReifiedParameters.forEachIndexed { index, parameter ->
-            appendLine("${name}Type${index + 1} = ${parameter.name}::class,")
+            appendLine("${name}${index + 1} = ${parameter.name}::class.serializer(),")
         }
     }
 
     private inline fun argsAndStreamsCombination(
         reifiedParameters: Boolean,
+        bounded: Boolean,
         crossinline body: (argumentTypes: List<TypeVariableName>, streamTypes: List<TypeVariableName>) -> Unit,
     ) {
-        val argsTypeVariables = 'T'.typeVariables(reified = reifiedParameters)
-        val streamsTypeVariables = 'F'.typeVariables(reified = reifiedParameters)
+        val argsTypeVariables = 'T'.typeVariables(reified = reifiedParameters, bounded = bounded)
+        val streamsTypeVariables = 'F'.typeVariables(reified = reifiedParameters, bounded = bounded)
 
         argsTypeVariables.combinatorics { tRes ->
             streamsTypeVariables.combinatorics { fRes ->
@@ -629,9 +637,10 @@ open class HubCommunicationTask : DefaultTask() {
 
     private inline fun paramsCombination(
         reifiedParameters: Boolean,
+        bounded: Boolean,
         crossinline body: (paramTypes: List<TypeVariableName>) -> Unit,
     ) {
-        val paramsTypeVariables = 'P'.typeVariables(reified = reifiedParameters)
+        val paramsTypeVariables = 'P'.typeVariables(reified = reifiedParameters, bounded = bounded)
 
         paramsTypeVariables.combinatorics { body(it) }
     }
@@ -646,13 +655,13 @@ open class HubCommunicationTask : DefaultTask() {
         }
     }
 
-    private fun Char.typeVariables(reified: Boolean) = List(COMBINATION_LIMIT) {
+    private fun Char.typeVariables(reified: Boolean, bounded: Boolean) = List(COMBINATION_LIMIT) {
         if (it == 0) null
-        else TypeVariableName(name = "${this}$it", bounds = listOf(Any::class)).copy(reified = reified)
+        else TypeVariableName(name = "${this}$it", bounds = if (bounded) listOf(Any::class) else emptyList()).copy(reified = reified)
     }
 
-    private val TypeName.inKClass
-        get() = KClass::class.asTypeName().parameterizedBy(this)
+    private val TypeName.inKSerializer
+        get() = KSerializer::class.asTypeName().parameterizedBy(this)
 
     companion object {
         private const val DOLLAR_SIGN = "\$"

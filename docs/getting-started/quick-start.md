@@ -51,7 +51,7 @@ The `invoke` method sends a message to the hub and expects a response:
 
 ```kotlin
 // Invoke a method and get the result
-val result = connection.invoke("echo", String::class, "Hello, SignalR!")
+val result = connection.invoke("echo", String.serializer(), "Hello, SignalR!")
 println("Server responded: $result")
 ```
 
@@ -61,7 +61,7 @@ To receive messages from the hub, use the `on` method:
 
 ```kotlin
 // Receive a message with two parameters
-connection.on("broadcastMessage", String::class, String::class).collect { (user, message) ->
+connection.on("broadcastMessage", String.serializer(), String.serializer()).collect { (user, message) ->
     println("$user says: $message")
 }
 ```
@@ -78,7 +78,7 @@ data class ChatMessage(
     val timestamp: String
 )
 
-connection.on("receiveMessage", ChatMessage::class).collect { (message) ->
+connection.on("receiveMessage", ChatMessage.serializer()).collect { (message) ->
     println("${message.user} says: ${message.message} at ${message.timestamp}")
 }
 ```
@@ -90,7 +90,7 @@ SignalRKore supports streaming data between client and server:
 ### Receiving a Stream
 
 ```kotlin
-connection.stream("counterStream", Int::class, 10, 1000).collect { count ->
+connection.stream("counterStream", Int.serializer(), 10, 1000).collect { count ->
     println("Received count: $count")
 }
 ```
@@ -152,12 +152,12 @@ fun main() {
         connection.send("broadcastMessage", "User", "Hello, SignalR!")
 
         // Receive messages
-        connection.on("broadcastMessage", String::class, String::class).collect { (user, message) ->
+        connection.on("broadcastMessage", String.serializer(), String.serializer()).collect { (user, message) ->
             println("$user says: $message")
         }
 
         // Receive messages with complex types
-        connection.on("receiveMessage", ChatMessage::class).collect { (message) ->
+        connection.on("receiveMessage", ChatMessage.serializer()).collect { (message) ->
             println("${message.user} says: ${message.message} at ${message.timestamp}")
         }
 

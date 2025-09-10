@@ -15,12 +15,10 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.serializer
-import kotlin.reflect.KClass
 
 abstract class HubCommunicationLink(private val json: Json) : HubCommunication() {
 
@@ -34,11 +32,9 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
 
     protected abstract val logger: Logger
 
-    @OptIn(InternalSerializationApi::class)
-    final override fun <T : Any> T.toJson(kClass: KClass<T>): JsonElement = json.encodeToJsonElement(kClass.serializer(), this)
+    final override fun <T : Any> T.toJson(serializer: KSerializer<T>): JsonElement = json.encodeToJsonElement(serializer, this)
 
-    @OptIn(InternalSerializationApi::class)
-    final override fun <T : Any> JsonElement.fromJson(kClass: KClass<T>): T = json.decodeFromJsonElement(kClass.serializer(), this)
+    final override fun <T> JsonElement.fromJson(deserializer: KSerializer<T>): T = json.decodeFromJsonElement(deserializer, this)
 
     protected abstract fun sendHubMessage(message: HubMessage)
 
@@ -67,7 +63,10 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
             scope.launch {
                 stream
                     .map<_, HubMessage> { HubMessage.StreamItem(invocationId = id, item = it) }
-                    .onCompletion { throwable -> throwable?.let { throw it } ?: emit(HubMessage.Completion.Simple(invocationId = id)) }
+                    .onCompletion { throwable ->
+                        if (throwable != null) throw throwable
+                        else emit(HubMessage.Completion.Simple(invocationId = id))
+                    }
                     .catch { emit(HubMessage.Completion.Error(invocationId = id, error = it.message.orEmpty())) }
                     .collect { sendHubMessage(it) }
             }
@@ -84,7 +83,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
 
     final override suspend fun <T : Any> invoke(
         method: String,
-        resultType: KClass<T>,
+        resultSerializer: KSerializer<T>,
         args: List<JsonElement>,
         streams: List<Flow<JsonElement>>,
     ): T = internalInvoke(
@@ -94,11 +93,11 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
         processSimple = { throw RuntimeException("The completion message has no result, but one is expected") },
         processResult = {
             try {
-                it.result.fromJson(resultType)
+                it.result.fromJson(resultSerializer)
             } catch (ex: SerializationException) {
-                throw RuntimeException("Completion result could not be parsed as ${resultType.simpleName}: ${it.result}", ex)
+                throw RuntimeException("Completion result could not be parsed as $resultSerializer: ${it.result}", ex)
             } catch (ex: IllegalArgumentException) {
-                throw RuntimeException("${resultType.simpleName} could not be initialized from the completion result: ${it.result}", ex)
+                throw RuntimeException("$resultSerializer could not be initialized from the completion result: ${it.result}", ex)
             }
         },
     )
@@ -132,7 +131,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
 
     final override fun <T : Any> stream(
         method: String,
-        itemType: KClass<T>,
+        itemSerializer: KSerializer<T>,
         args: List<JsonElement>,
         streams: List<Flow<JsonElement>>,
     ): Flow<T> {
@@ -160,11 +159,14 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
                     .filter { it.invocationId == invocationId }
                     .map {
                         try {
-                            it.item.fromJson(itemType)
+                            it.item.fromJson(itemSerializer)
                         } catch (ex: SerializationException) {
-                            throw RuntimeException("Completion result could not be parsed as ${itemType.simpleName}: ${it.item}", ex)
+                            throw RuntimeException("Completion result could not be parsed as $itemSerializer: ${it.item}", ex)
                         } catch (ex: IllegalArgumentException) {
-                            throw RuntimeException("${itemType.simpleName} could not be initialized from the completion result: ${it.item}", ex)
+                            throw RuntimeException(
+                                "$itemSerializer could not be initialized from the completion result: ${it.item}",
+                                ex
+                            )
                         }
                     }
                     .collect { if (!isClosedForSend) send(it) }
@@ -215,7 +217,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
         receivedCompletions.emit(message)
 
     final override fun <T : Any> Flow<HubMessage.Invocation>.handleIncomingInvocation(
-        resultType: KClass<T>,
+        resultSerializer: KSerializer<T>,
         callback: suspend (HubMessage.Invocation) -> T,
     ) {
         collectInScope(scope) { message ->
@@ -228,14 +230,6 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
                             severity = Logger.Severity.ERROR,
                             message = "Getting result for non-blocking invocation of '${message.target}' method has thrown an exception",
                             cause = ex,
-                        )
-                    }
-                    if (resultType != Unit::class) {
-                        // todo should I also print the actual result inside message?
-                        logger.log(
-                            severity = Logger.Severity.WARNING,
-                            message = "Result was returned for '${message.target}' method but server is not expecting any result.",
-                            cause = null,
                         )
                     }
                 }
@@ -261,7 +255,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
                     complete(
                         HubMessage.Completion.Resulted(
                             invocationId = message.invocationId,
-                            result = result.toJson(resultType),
+                            result = result.toJson(resultSerializer),
                         )
                     )
                 }

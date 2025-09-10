@@ -24,12 +24,12 @@ connection.on("ping").collect {
 }
 
 // Register a handler for a hub method with one parameter
-connection.on("receiveMessage", String::class).collect { (message) ->
+connection.on("receiveMessage", String.serializer()).collect { (message) ->
     println("Received message: $message")
 }
 
 // Register a handler for a hub method with multiple parameters
-connection.on("broadcastMessage", String::class, String::class).collect { (user, message) ->
+connection.on("broadcastMessage", String.serializer(), String.serializer()).collect { (user, message) ->
     println("$user says: $message")
 }
 ```
@@ -42,13 +42,13 @@ You need to specify the type of each parameter that the hub method will receive:
 
 ```kotlin
 // One parameter of type String
-connection.on("receiveMessage", String::class)
+connection.on("receiveMessage", String.serializer())
 
 // Two parameters: String and Int
-connection.on("receiveScore", String::class, Int::class)
+connection.on("receiveScore", String.serializer(), Int.serializer())
 
 // Three parameters: String, Double, Double
-connection.on("receiveLocation", String::class, Double::class, Double::class)
+connection.on("receiveLocation", String.serializer(), Double.serializer(), Double.serializer())
 ```
 
 ### Receiving Complex Types
@@ -64,7 +64,7 @@ data class ChatMessage(
 )
 
 // Register a handler for a hub method that receives a complex type
-connection.on("receiveMessage", ChatMessage::class).collect { (message) ->
+connection.on("receiveMessage", ChatMessage.serializer()).collect { (message) ->
     println("${message.user} says: ${message.message} at ${message.timestamp}")
 }
 ```
@@ -77,15 +77,13 @@ You can receive collections as parameters:
 
 ```kotlin
 // Receive a list of strings
-connection.on("receiveUsers", List::class).collect { (users) ->
-    val userList = users as List<String>
-    println("Received users: ${userList.joinToString(", ")}")
+connection.on("receiveUsers", ListSerializer(String.serializer())).collect { (users) ->
+    println("Received users: ${users.joinToString(", ")}")
 }
 
 // Receive a map
-connection.on("receiveUserRoles", Map::class).collect { (userRoles) ->
-    val roleMap = userRoles as Map<String, String>
-    println("Received user roles: $roleMap")
+connection.on("receiveUserRoles", MapSerializer(Strin.serializer(), String.serializer()).collect { (userRoles) ->
+    println("Received user roles: $userRoles")
 }
 ```
 
@@ -95,7 +93,7 @@ Some hub methods may expect a result from the client. You can return a result us
 
 ```kotlin
 // Register a handler that returns a result
-connection.on("getClientTime", resultType = String::class) {
+connection.on("getClientTime", resultType = String.serializer()) {
     // Return the current time as a string
     val currentTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date())
     currentTime

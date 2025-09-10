@@ -36,7 +36,7 @@ connection.start()
 connection.send("broadcastMessage", "User", "Hello, SignalR!")
 
 // Receive messages from the server
-connection.on("broadcastMessage", String::class, String::class).collect { (user, message) ->
+connection.on("broadcastMessage", String.serializer(), String.serializer()).collect { (user, message) ->
     println("$user says: $message")
 }
 
