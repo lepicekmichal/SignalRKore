@@ -30,11 +30,7 @@ class HttpHubConnectionBuilder(private val url: String) {
     /**
      * The access token provider to be used by the [eu.lepicekmichal.signalrkore.HubConnection]
      */
-    var accessToken: String?
-        get() = headers["Authorization"]
-        set(token) {
-            headers["Authorization"] = "Bearer $token"
-        }
+    var accessTokenProvider: (suspend () -> String)? = null
 
     /**
      * The duration that the [eu.lepicekmichal.signalrkore.HubConnection] should wait for a Handshake Response from the server
@@ -65,16 +61,17 @@ class HttpHubConnectionBuilder(private val url: String) {
      * @return A new instance of [eu.lepicekmichal.signalrkore.HubConnection].
      */
     fun build(): HubConnection = HubConnection(
-        url,
-        skipNegotiate,
-        automaticReconnect,
-        httpClient,
-        if (::protocol.isInitialized) protocol else JsonHubProtocol(logger),
-        handshakeResponseTimeout,
-        headers,
-        transportEnum,
-        null,
-        json,
-        logger,
+        url = url,
+        skipNegotiate = skipNegotiate,
+        automaticReconnect = automaticReconnect,
+        httpClient = httpClient,
+        protocol = if (::protocol.isInitialized) protocol else JsonHubProtocol(logger),
+        handshakeResponseTimeout = handshakeResponseTimeout,
+        headers = headers,
+        accessTokenProvider = accessTokenProvider,
+        transportEnum = transportEnum,
+        transport = null,
+        json = json,
+        logger = logger,
     )
 }

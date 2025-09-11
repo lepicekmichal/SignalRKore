@@ -68,6 +68,7 @@ import kotlin.time.TimeSource
  * @property transportEnum The transport type to use for communication
  * @property handshakeResponseTimeout The timeout for handshake response
  * @property headers HTTP headers to include in requests
+ * @property accessTokenProvider Lazy access token to include in HTTP headers in requests
  * @property skipNegotiate Whether to skip the negotiate step (WebSockets only)
  * @property automaticReconnect The automatic reconnect policy
  * @property logger The logger for logging messages
@@ -80,6 +81,7 @@ class HubConnection private constructor(
     private val transportEnum: TransportEnum,
     private val handshakeResponseTimeout: Duration,
     private val headers: Map<String, String>,
+    private val accessTokenProvider: (suspend () -> String)?,
     private val skipNegotiate: Boolean,
     private val automaticReconnect: AutomaticReconnect,
     override val logger: Logger,
@@ -127,6 +129,7 @@ class HubConnection private constructor(
         protocol: HubProtocol,
         handshakeResponseTimeout: Duration,
         headers: Map<String, String>,
+        accessTokenProvider: (suspend () -> String)?,
         transportEnum: TransportEnum,
         transport: Transport?,
         json: Json,
@@ -142,6 +145,7 @@ class HubConnection private constructor(
         transportEnum = transportEnum,
         handshakeResponseTimeout = if (handshakeResponseTimeout.isPositive()) handshakeResponseTimeout else 15.seconds,
         headers = headers,
+        accessTokenProvider = accessTokenProvider,
         skipNegotiate = skipNegotiate,
         automaticReconnect = automaticReconnect,
         json = json,
@@ -162,9 +166,13 @@ class HubConnection private constructor(
         if (skipNegotiate && transportEnum != TransportEnum.WebSockets)
             throw RuntimeException("Negotiation can only be skipped when using a WebSocket transport")
 
+        val headersWithAccessToken = accessTokenProvider?.invoke()?.let { accessToken ->
+            headers.toMutableMap().apply { this["Authorization"] = "Bearer $accessToken" }
+        } ?: headers
+
         val negotiation = if (!skipNegotiate) {
             try {
-                startNegotiate(url = baseUrl, headers = headers, negotiateAttempts = 0)
+                startNegotiate(url = baseUrl, headers = headersWithAccessToken, negotiateAttempts = 0)
             } catch (ex: Exception) {
                 if (!reconnectionAttempt) {
                     if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(ex.message)
@@ -175,7 +183,7 @@ class HubConnection private constructor(
                 }
             }
         } else {
-            Negotiation(transport = TransportEnum.WebSockets, url = baseUrl, headers = headers)
+            Negotiation(transport = TransportEnum.WebSockets, url = baseUrl, headers = headersWithAccessToken)
         }
 
         if (!::transport.isInitialized) {
