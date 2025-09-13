@@ -89,7 +89,7 @@ headers = mapOf(
 You can provide an access token for authentication:
 
 ```kotlin
-accessToken = "your-access-token"
+accessTokenProvider = { "your-access-token" }
 ```
 
 This is a convenience property that sets the "Authorization" header with a "Bearer" prefix.
@@ -162,7 +162,7 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
     automaticReconnect = AutomaticReconnect.Active
     handshakeResponseTimeout = 30.seconds
     headers = mapOf("Custom-Header" to "Value")
-    accessToken = "your-access-token"
+    accessTokenProvider = { "your-access-token" }
     httpClient = HttpClient {
         install(WebSockets)
         install(SSE)
@@ -194,15 +194,15 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 
 ### HttpHubConnectionBuilder Properties
 
-| Name | Type | Default | Description |
-|------|------|---------|-------------|
-| `transportEnum` | `TransportEnum` | `TransportEnum.All` | The transport type to use for the connection |
-| `skipNegotiate` | `Boolean` | `false` | Whether to skip the negotiate step (WebSockets only) |
-| `automaticReconnect` | `AutomaticReconnect` | `AutomaticReconnect.Inactive` | The automatic reconnect policy |
-| `handshakeResponseTimeout` | `Duration` | `15.seconds` | The timeout for the handshake response |
-| `headers` | `Map<String, String>` | `emptyMap()` | HTTP headers to include in requests |
-| `accessToken` | `String?` | `null` | Access token for authentication (sets the "Authorization" header with "Bearer" prefix) |
-| `httpClient` | `HttpClient?` | `null` | Custom Ktor HTTP client |
-| `protocol` | `HubProtocol` | `JsonHubProtocol()` | The protocol used for communication with the hub |
-| `json` | `Json` | `Json { ignoreUnknownKeys = true }` | JSON serializer |
-| `logger` | `Logger` | `Logger.Empty` | Logger for logging messages |
+| Name                       | Type                    | Default | Description |
+|----------------------------|-------------------------|---------|-------------|
+| `transportEnum`            | `TransportEnum`         | `TransportEnum.All` | The transport type to use for the connection |
+| `skipNegotiate`            | `Boolean`               | `false` | Whether to skip the negotiate step (WebSockets only) |
+| `automaticReconnect`       | `AutomaticReconnect`    | `AutomaticReconnect.Inactive` | The automatic reconnect policy |
+| `handshakeResponseTimeout` | `Duration`              | `15.seconds` | The timeout for the handshake response |
+| `headers`                  | `Map<String, String>`   | `emptyMap()` | HTTP headers to include in requests |
+| `accessTokenProvider`      | `(suspend () -> String)?` | `null` | Access token for authentication (sets the "Authorization" header with "Bearer" prefix) |
+| `httpClient`               | `HttpClient?`           | `null` | Custom Ktor HTTP client |
+| `protocol`                 | `HubProtocol`           | `JsonHubProtocol()` | The protocol used for communication with the hub |
+| `json`                     | `Json`                  | `Json { ignoreUnknownKeys = true }` | JSON serializer |
+| `logger`                   | `Logger`                | `Logger.Empty` | Logger for logging messages |

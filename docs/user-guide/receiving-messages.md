@@ -100,7 +100,7 @@ connection.on("getClientTime", resultType = String.serializer()) {
 }
 
 // Register a handler with parameters that returns a result
-connection.on("add", Int::class, Int::class, resultType = Int::class) { a, b ->
+connection.on("add", Int.serializer(), Int.serializer(), resultType = Int.serializer()) { a, b ->
     // Return the sum of the two parameters
     a + b
 }
@@ -113,7 +113,7 @@ The `resultType` parameter specifies the type of the result that the hub method 
 When receiving messages, you should handle potential errors:
 
 ```kotlin
-connection.on("receiveMessage", String::class)
+connection.on("receiveMessage", String.serializer())
     .catch { ex ->
         println("Error receiving message: ${ex.message}")
     }
@@ -136,7 +136,7 @@ If you need to manually unregister a handler, you can use the `cancel` method on
 
 ```kotlin
 val job = scope.launch {
-    connection.on("receiveMessage", String::class).collect { (message) ->
+    connection.on("receiveMessage", String.serializer()).collect { (message) ->
         println("Received message: $message")
     }
 }
@@ -163,7 +163,7 @@ scope.launch {
         
         // Register a handler for a hub method with multiple parameters
         launch {
-            connection.on("broadcastMessage", String::class, String::class)
+            connection.on("broadcastMessage", String.serializer(), String.serializer())
                 .catch { ex ->
                     println("Error receiving message: ${ex.message}")
                 }
@@ -174,13 +174,13 @@ scope.launch {
         
         // Register a handler for a hub method that receives a complex type
         launch {
-            connection.on("receiveMessage", ChatMessage::class).collect { (message) ->
+            connection.on("receiveMessage", ChatMessage.serializer()).collect { (message) ->
                 println("${message.user} says: ${message.message} at ${message.timestamp}")
             }
         }
         
         // Register a handler that returns a result
-        connection.on("getClientTime", resultType = String::class) {
+        connection.on("getClientTime", resultType = String.serializer()) {
             val currentTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date())
             currentTime
         }

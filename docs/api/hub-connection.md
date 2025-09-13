@@ -154,14 +154,14 @@ See [Reconnection](../user-guide/reconnection.md) for more details on reconnecti
 
 ### Methods
 
-| Name | Parameters | Return Type | Description |
-|------|------------|-------------|-------------|
-| `start` | `reconnectionAttempt: Boolean = false` | `Unit` | Starts the connection to the hub |
-| `stop` | `errorMessage: String? = null` | `Unit` | Stops the connection to the hub |
-| `send` | `method: String, vararg args: Any?` | `Unit` | Sends a message to the hub without expecting a response |
-| `invoke` | `method: String, resultType: KClass<T>, vararg args: Any?` | `T` | Sends a message to the hub and expects a response |
-| `on` | `method: String, paramType1: KClass<T1>, paramType2: KClass<T2>, ...` | `Flow<Tuple>` | Registers a handler for a specific hub method |
-| `stream` | `method: String, itemType: KClass<T>, vararg args: Any?` | `Flow<T>` | Receives a stream of data from the hub |
+| Name | Parameters                                                            | Return Type | Description |
+|------|-----------------------------------------------------------------------|-------------|-------------|
+| `start` | `reconnectionAttempt: Boolean = false`                                | `Unit` | Starts the connection to the hub |
+| `stop` | `errorMessage: String? = null`                                        | `Unit` | Stops the connection to the hub |
+| `send` | `method: String, vararg args: Any?`                                   | `Unit` | Sends a message to the hub without expecting a response |
+| `invoke` | `method: String, resultType: KSerializer<T>, vararg args: Any?`       | `T` | Sends a message to the hub and expects a response |
+| `on` | `method: String, paramType1: KSerializer<T1>, paramType2: KSerializer<T2>, ...` | `Flow<Tuple>` | Registers a handler for a specific hub method |
+| `stream` | `method: String, itemType: KSerializer<T>, vararg args: Any?`              | `Flow<T>` | Receives a stream of data from the hub |
 
 ### Enums
 

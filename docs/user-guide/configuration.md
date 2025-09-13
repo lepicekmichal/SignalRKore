@@ -59,7 +59,7 @@ headers = mapOf(
 You can provide an access token for authentication:
 
 ```kotlin
-accessToken = "your-access-token"
+accessTokenProvider = { "your-access-token" }
 ```
 
 This is a convenience property that sets the "Authorization" header with a "Bearer" prefix. It's equivalent to:
@@ -246,7 +246,7 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 
     // Authentication and headers
     headers = mapOf("Custom-Header" to "Value")
-    accessToken = "your-access-token"
+    accessTokenProvider = { "your-access-token" }
 
     // Timeout and reconnection
     handshakeResponseTimeout = 30.seconds
