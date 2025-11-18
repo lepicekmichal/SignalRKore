@@ -70,7 +70,6 @@ class HttpHubConnectionBuilder(private val url: String) {
         headers = headers,
         accessTokenProvider = accessTokenProvider,
         transportEnum = transportEnum,
-        transport = null,
         json = json,
         logger = logger,
     )
