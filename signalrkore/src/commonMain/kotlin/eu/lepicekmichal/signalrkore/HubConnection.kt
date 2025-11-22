@@ -119,7 +119,7 @@ class HubConnection private constructor(
     private val _connectionId: MutableStateFlow<String?> = MutableStateFlow(null)
     val connectionId: StateFlow<String?> = _connectionId.asStateFlow()
 
-    private lateinit var transport: Transport
+    private var transport: Transport? = null
 
     internal constructor(
         url: String,
@@ -131,7 +131,6 @@ class HubConnection private constructor(
         headers: Map<String, String>,
         accessTokenProvider: (suspend () -> String)?,
         transportEnum: TransportEnum,
-        transport: Transport?,
         json: Json,
         logger: Logger,
     ) : this(
@@ -150,9 +149,7 @@ class HubConnection private constructor(
         automaticReconnect = automaticReconnect,
         json = json,
         logger = logger,
-    ) {
-        transport?.let { this.transport = it }
-    }
+    )
 
     suspend fun start() = start(reconnectionAttempt = false)
 
@@ -186,13 +183,15 @@ class HubConnection private constructor(
             Negotiation(transport = TransportEnum.WebSockets, url = baseUrl, headers = headersWithAccessToken)
         }
 
-        if (!::transport.isInitialized) {
-            transport = when (negotiation.transport) {
-                TransportEnum.LongPolling -> LongPollingTransport(negotiation.headers, httpClient)
-                TransportEnum.ServerSentEvents -> ServerSentEventsTransport(negotiation.headers, httpClient)
-                else -> WebSocketTransport(negotiation.headers, httpClient)
-            }
+        transport?.stop()
+
+        val transport = when (negotiation.transport) {
+            TransportEnum.LongPolling -> LongPollingTransport(negotiation.headers, httpClient)
+            TransportEnum.ServerSentEvents -> ServerSentEventsTransport(negotiation.headers, httpClient)
+            else -> WebSocketTransport(negotiation.headers, httpClient)
         }
+
+        this.transport = transport
 
         try {
             transport.start(negotiation.url)
@@ -397,7 +396,7 @@ class HubConnection private constructor(
 
         logger.log(Logger.Severity.INFO, "[$baseUrl] ${errorMessage ?: "Stopping connection"}", null)
 
-        if (::transport.isInitialized) transport.stop()
+        transport?.stop()
         job.cancelChildren()
     }
 
@@ -410,8 +409,11 @@ class HubConnection private constructor(
         val serializedMessage: ByteArray = protocol.writeMessage(message)
         scope.launch {
             try {
-                if (::transport.isInitialized) transport.send(serializedMessage)
-                logger.log(Logger.Severity.INFO, "Sent hub data: $message", null)
+                transport?.let {
+                    it.send(serializedMessage)
+                    logger.log(Logger.Severity.INFO, "Sent hub data: $message", null)
+                }
+
                 resetKeepAlive()
             } catch (e: Exception) {
                 logger.log(Logger.Severity.ERROR, "Failed to send hub data: $message", e)
