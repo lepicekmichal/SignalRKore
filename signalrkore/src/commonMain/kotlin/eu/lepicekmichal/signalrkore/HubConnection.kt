@@ -71,6 +71,8 @@ import kotlin.time.TimeSource
  * @property accessTokenProvider Lazy access token to include in HTTP headers in requests
  * @property skipNegotiate Whether to skip the negotiate step (WebSockets only)
  * @property automaticReconnect The automatic reconnect policy
+ * @property serverTimeout The server timeout duration
+ * @property keepAliveInterval The keep-alive interval duration
  * @property logger The logger for logging messages
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -84,6 +86,8 @@ class HubConnection private constructor(
     private val accessTokenProvider: (suspend () -> String)?,
     private val skipNegotiate: Boolean,
     private val automaticReconnect: AutomaticReconnect,
+    private val serverTimeout: Duration,
+    private val keepAliveInterval: Duration,
     override val logger: Logger,
     json: Json,
 ) : HubCommunicationLink(json) {
@@ -97,7 +101,7 @@ class HubConnection private constructor(
         .flatMapLatest {
             flow {
                 while (true) {
-                    delay(KEEP_ALIVE_INTERVAL.milliseconds)
+                    delay(keepAliveInterval)
                     emit(Unit)
                 }
             }
@@ -108,7 +112,7 @@ class HubConnection private constructor(
         .onStart { emit(Unit) }
         .flatMapLatest {
             flow<Nothing> {
-                delay(SERVER_TIMEOUT.milliseconds)
+                delay(serverTimeout)
                 throw RuntimeException("Server timeout elapsed without receiving a message from the server.")
             }
         }
@@ -132,6 +136,8 @@ class HubConnection private constructor(
         accessTokenProvider: (suspend () -> String)?,
         transportEnum: TransportEnum,
         json: Json,
+        serverTimeout: Duration,
+        keepAliveInterval: Duration,
         logger: Logger,
     ) : this(
         baseUrl = url.takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("A valid url is required."),
@@ -148,6 +154,8 @@ class HubConnection private constructor(
         skipNegotiate = skipNegotiate,
         automaticReconnect = automaticReconnect,
         json = json,
+        serverTimeout = serverTimeout,
+        keepAliveInterval = keepAliveInterval,
         logger = logger,
     )
 
@@ -459,7 +467,5 @@ class HubConnection private constructor(
     companion object {
         private const val NEGOTIATE_VERSION = 1
         private const val MAX_NEGOTIATE_ATTEMPTS = 100
-        private const val SERVER_TIMEOUT = 30 * 1000
-        private const val KEEP_ALIVE_INTERVAL = 15 * 1000
     }
 }

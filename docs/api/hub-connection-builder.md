@@ -73,6 +73,22 @@ You can configure the timeout for the handshake response:
 handshakeResponseTimeout = 30.seconds
 ```
 
+### Server Timeout
+
+You can configure the maximum duration the connection will wait for a message from the server before closing:
+
+```kotlin
+serverTimeout = 30.seconds // default is 30 seconds
+```
+
+### Keep Alive Interval
+
+You can configure how often the client sends keep-alive pings to the server:
+
+```kotlin
+keepAliveInterval = 15.seconds // default is 15 seconds
+```
+
 ### HTTP Headers
 
 You can add custom HTTP headers to the connection:
@@ -161,6 +177,8 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
     skipNegotiate = true
     automaticReconnect = AutomaticReconnect.Active
     handshakeResponseTimeout = 30.seconds
+    serverTimeout = 30.seconds // default
+    keepAliveInterval = 15.seconds // default
     headers = mapOf("Custom-Header" to "Value")
     accessTokenProvider = { "your-access-token" }
     httpClient = HttpClient {
@@ -200,6 +218,8 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 | `skipNegotiate`            | `Boolean`               | `false` | Whether to skip the negotiate step (WebSockets only) |
 | `automaticReconnect`       | `AutomaticReconnect`    | `AutomaticReconnect.Inactive` | The automatic reconnect policy |
 | `handshakeResponseTimeout` | `Duration`              | `15.seconds` | The timeout for the handshake response |
+| `serverTimeout`            | `Duration`              | `30.seconds` | The maximum time to wait for a message from the server before closing the connection |
+| `keepAliveInterval`        | `Duration`              | `15.seconds` | The interval at which keep-alive pings are sent to the server |
 | `headers`                  | `Map<String, String>`   | `emptyMap()` | HTTP headers to include in requests |
 | `accessTokenProvider`      | `(suspend () -> String)?` | `null` | Access token for authentication (sets the "Authorization" header with "Bearer" prefix) |
 | `httpClient`               | `HttpClient?`           | `null` | Custom Ktor HTTP client |

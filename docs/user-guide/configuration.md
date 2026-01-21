@@ -80,6 +80,22 @@ You can configure the timeout for the handshake response:
 handshakeResponseTimeout = 30.seconds
 ```
 
+### Server Timeout
+
+You can configure the maximum duration the connection will wait for a message from the server before closing:
+
+```kotlin
+serverTimeout = 30.seconds // default is 30 seconds
+```
+
+### Keep Alive Interval
+
+You can configure how often the client sends keep-alive pings to the server:
+
+```kotlin
+keepAliveInterval = 15.seconds // default is 15 seconds
+```
+
 ### Automatic Reconnect
 
 You can configure automatic reconnection when the connection is lost:
@@ -250,6 +266,8 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 
     // Timeout and reconnection
     handshakeResponseTimeout = 30.seconds
+    serverTimeout = 30.seconds // default
+    keepAliveInterval = 15.seconds // default
     automaticReconnect = AutomaticReconnect.exponentialBackoff()
 
     // HTTP client

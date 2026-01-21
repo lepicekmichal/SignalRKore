@@ -3,6 +3,7 @@ package eu.lepicekmichal.signalrkore
 import io.ktor.client.HttpClient
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class HttpHubConnectionBuilder(private val url: String) {
@@ -58,6 +59,18 @@ class HttpHubConnectionBuilder(private val url: String) {
     var automaticReconnect: AutomaticReconnect = AutomaticReconnect.Inactive
 
     /**
+     * Sets serverTimeout for the HubConnection
+     * defaults to 30 seconds
+     */
+    var serverTimeout: Duration = DEFAULT_SERVER_TIMEOUT.milliseconds
+
+    /**
+     * Sets keepAliveInternval for the HubConnection
+     * defaults to 15 seconds
+     */
+    var keepAliveInterval: Duration = DEFAULT_KEEP_ALIVE_INTERVAL.milliseconds
+
+    /**
      * @return A new instance of [eu.lepicekmichal.signalrkore.HubConnection].
      */
     fun build(): HubConnection = HubConnection(
@@ -72,5 +85,12 @@ class HttpHubConnectionBuilder(private val url: String) {
         transportEnum = transportEnum,
         json = json,
         logger = logger,
+        serverTimeout = serverTimeout,
+        keepAliveInterval = keepAliveInterval,
     )
+
+    companion object {
+        private const val DEFAULT_SERVER_TIMEOUT = 30 * 1000L
+        private const val DEFAULT_KEEP_ALIVE_INTERVAL = 15 * 1000L
+    }
 }
