@@ -49,7 +49,7 @@ class HttpHubConnectionBuilder(private val url: String) {
     var json: Json = Json
 
     /**
-     * Json instance for (de)serializing custom models coming through as payloads
+     * Custom logger using [eu.lepicekmichal.signalrkore.Logger].
      */
     var logger: Logger = Logger { _, _, _ -> }
 
