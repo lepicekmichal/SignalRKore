@@ -41,8 +41,16 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
     protected abstract fun connectedCheck(method: String)
 
     private fun complete(message: HubMessage.Completion) {
-        connectedCheck("complete")
-        sendHubMessage(message)
+        try {
+            connectedCheck("complete")
+            sendHubMessage(message)
+        } catch (ex: Exception) {
+            logger.log(
+                severity = Logger.Severity.ERROR,
+                message = "Sending completion message has thrown an exception",
+                cause = ex,
+            )
+        }
     }
 
     final override fun send(method: String, args: List<JsonElement>, streams: List<Flow<JsonElement>>) {

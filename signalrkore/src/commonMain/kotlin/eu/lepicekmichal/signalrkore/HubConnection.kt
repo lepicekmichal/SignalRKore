@@ -41,6 +41,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.net.SocketException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -425,6 +426,10 @@ class HubConnection private constructor(
                 resetKeepAlive()
             } catch (e: Exception) {
                 logger.log(Logger.Severity.ERROR, "Failed to send hub data: $message", e)
+                if (e is SocketException) {
+                    if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(e.message)
+                    else stop(e.message)
+                }
             }
         }
     }
