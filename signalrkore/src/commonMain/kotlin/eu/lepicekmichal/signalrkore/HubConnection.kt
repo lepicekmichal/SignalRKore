@@ -305,9 +305,9 @@ class HubConnection private constructor(
                     else -> response.selectTransport(transportEnum)
                 } ?: throw RuntimeException("There were no compatible transports on the server.")
 
-                val id = if (response.negotiateVersion > 0) response.connectionToken else response.connectionId
-                _connectionId.update { id }
-                val finalUrl: String = URLBuilder(url).apply { parameters.append("id", id) }.buildString()
+                val connectionToken = if (response.negotiateVersion > 0) response.connectionToken else response.connectionId
+                _connectionId.update { response.connectionId }
+                val finalUrl: String = URLBuilder(url).apply { parameters.append("id", connectionToken) }.buildString()
 
                 return Negotiation(
                     transport = chosenTransport,
