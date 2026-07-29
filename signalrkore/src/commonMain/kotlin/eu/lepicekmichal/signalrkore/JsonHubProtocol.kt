@@ -21,10 +21,10 @@ class JsonHubProtocol(private val logger: Logger) : HubProtocol {
             .filter { it.isNotEmpty() }
             .mapNotNull { str ->
                 try {
-                    logger.log(Logger.Severity.INFO, "Decoding message: $str", null)
+                    logger.log(Logger.Severity.INFO, { "Decoding message: $str" }, null)
                     json.decodeFromString(str)
                 } catch (ex: Exception) {
-                    logger.log(Logger.Severity.ERROR, "Failed to decode message: $str", ex)
+                    logger.log(Logger.Severity.ERROR, { "Failed to decode message: $str" }, ex)
                     null
                 }
             }
@@ -32,7 +32,7 @@ class JsonHubProtocol(private val logger: Logger) : HubProtocol {
 
     override fun writeMessage(message: HubMessage): ByteArray =
         (json.encodeToString(message)
-            .also { logger.log(Logger.Severity.INFO, "Encoded message: $it", null) } + RECORD_SEPARATOR).toByteArray()
+            .also { logger.log(Logger.Severity.INFO, { "Encoded message: $it" }, null) } + RECORD_SEPARATOR).toByteArray()
 
     companion object {
         private const val PROTOCOL_NAME = "json"

@@ -196,9 +196,9 @@ You can provide a custom logger:
 ```kotlin
 logger = Logger { severity, message, cause ->
     when (severity) {
-        Logger.Severity.INFO -> println("INFO: $message")
-        Logger.Severity.WARNING -> println("WARNING: $message")
-        Logger.Severity.ERROR -> println("ERROR: $message, cause: $cause")
+        Logger.Severity.INFO -> println("INFO: ${message()}")
+        Logger.Severity.WARNING -> println("WARNING: ${message()}")
+        Logger.Severity.ERROR -> println("ERROR: ${message()}, cause: $cause")
     }
 }
 ```

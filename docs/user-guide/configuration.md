@@ -202,9 +202,9 @@ You can provide a custom logger:
 ```kotlin
 logger = Logger { severity, message, cause ->
     when (severity) {
-        Logger.Severity.INFO -> println("INFO: $message")
-        Logger.Severity.WARNING -> println("WARNING: $message")
-        Logger.Severity.ERROR -> println("ERROR: $message, cause: $cause")
+        Logger.Severity.INFO -> println("INFO: ${message()}")
+        Logger.Severity.WARNING -> println("WARNING: ${message()}")
+        Logger.Severity.ERROR -> println("ERROR: ${message()}, cause: $cause")
     }
 }
 ```
@@ -218,9 +218,9 @@ You can integrate with popular logging frameworks:
 ```kotlin
 logger = Logger { severity, message, cause ->
     when (severity) {
-        Logger.Severity.INFO -> Napier.i(message)
-        Logger.Severity.WARNING -> Napier.w(message)
-        Logger.Severity.ERROR -> Napier.e(cause, message)
+        Logger.Severity.INFO -> Napier.i(message())
+        Logger.Severity.WARNING -> Napier.w(message())
+        Logger.Severity.ERROR -> Napier.e(cause, message())
     }
 }
 ```
@@ -234,18 +234,18 @@ For other logging frameworks like SLF4J or Timber, you can use a similar approac
 logger = Logger { severity, message, cause ->
     val logger = LoggerFactory.getLogger("SignalRKore")
     when (severity) {
-        Logger.Severity.INFO -> logger.info(message)
-        Logger.Severity.WARNING -> logger.warn(message)
-        Logger.Severity.ERROR -> logger.error(message, cause)
+        Logger.Severity.INFO -> logger.info(message())
+        Logger.Severity.WARNING -> logger.warn(message())
+        Logger.Severity.ERROR -> logger.error(message(), cause)
     }
 }
 
 // Timber (Android)
 logger = Logger { severity, message, cause ->
     when (severity) {
-        Logger.Severity.INFO -> Timber.i(message)
-        Logger.Severity.WARNING -> Timber.w(message)
-        Logger.Severity.ERROR -> Timber.e(cause, message)
+        Logger.Severity.INFO -> Timber.i(message())
+        Logger.Severity.WARNING -> Timber.w(message())
+        Logger.Severity.ERROR -> Timber.e(cause, message())
     }
 }
 ```
@@ -288,9 +288,9 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
     // Logging
     logger = Logger { severity, message, cause ->
         when (severity) {
-            Logger.Severity.INFO -> println("INFO: $message")
-            Logger.Severity.WARNING -> println("WARNING: $message")
-            Logger.Severity.ERROR -> println("ERROR: $message, cause: $cause")
+            Logger.Severity.INFO -> println("INFO: ${message()}")
+            Logger.Severity.WARNING -> println("WARNING: ${message()}")
+            Logger.Severity.ERROR -> println("ERROR: ${message()}, cause: $cause")
         }
     }
 }

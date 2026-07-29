@@ -375,17 +375,17 @@ class HubConnection private constructor(
                 delay(timeMillis = delayTime ?: break)
 
                 try {
-                    logger.log(Logger.Severity.INFO, "[$baseUrl] Reconnecting - #${retryCount} attempt", null)
+                    logger.log(Logger.Severity.INFO, { "[$baseUrl] Reconnecting - #${retryCount} attempt" }, null)
                     start(reconnectionAttempt = true)
                 } catch (ex: Exception) {
-                    logger.log(Logger.Severity.INFO, "[$baseUrl] Reconnecting error", ex)
+                    logger.log(Logger.Severity.INFO, { "[$baseUrl] Reconnecting error" }, ex)
                     continue
                 }
                 break
             }
 
             if (_connectionState.value != HubConnectionState.CONNECTED) {
-                logger.log(Logger.Severity.INFO, "[$baseUrl] Reconnection unsuccessful, terminating", null)
+                logger.log(Logger.Severity.INFO, { "[$baseUrl] Reconnection unsuccessful, terminating" }, null)
 
                 _connectionState.value = HubConnectionState.DISCONNECTED
 
@@ -401,7 +401,7 @@ class HubConnection private constructor(
 
         _connectionState.value = HubConnectionState.DISCONNECTED
 
-        logger.log(Logger.Severity.INFO, "[$baseUrl] ${errorMessage ?: "Stopping connection"}", null)
+        logger.log(Logger.Severity.INFO, { "[$baseUrl] ${errorMessage ?: "Stopping connection"}" }, null)
 
         transport?.stop()
         job.cancelChildren()
@@ -409,7 +409,7 @@ class HubConnection private constructor(
 
     override fun sendHubMessage(message: HubMessage) {
         if (connectionState.value != HubConnectionState.CONNECTED) {
-            logger.log(Logger.Severity.ERROR, "Trying to send a message while the connection is not active. ($message)", null)
+            logger.log(Logger.Severity.ERROR, { "Trying to send a message while the connection is not active. ($message)" }, null)
             return
         }
 
@@ -418,12 +418,12 @@ class HubConnection private constructor(
             try {
                 transport?.let {
                     it.send(serializedMessage)
-                    logger.log(Logger.Severity.INFO, "Sent hub data: $message", null)
+                    logger.log(Logger.Severity.INFO, { "Sent hub data: $message" }, null)
                 }
 
                 resetKeepAlive()
             } catch (e: Exception) {
-                logger.log(Logger.Severity.ERROR, "Failed to send hub data: $message", e)
+                logger.log(Logger.Severity.ERROR, { "Failed to send hub data: $message" }, e)
                 if (e is IOException) {
                     if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(e.message)
                     else stop(e.message)

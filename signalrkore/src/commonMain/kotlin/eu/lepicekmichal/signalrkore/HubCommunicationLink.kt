@@ -47,7 +47,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
         } catch (ex: Exception) {
             logger.log(
                 severity = Logger.Severity.ERROR,
-                message = "Sending completion message has thrown an exception",
+                message = { "Sending completion message has thrown an exception" },
                 cause = ex,
             )
         }
@@ -86,7 +86,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
         args = args,
         uploadStreams = streams,
         processSimple = { },
-        processResult = { logger.log(Logger.Severity.INFO, "Result of a completion message has been ignored: ${it.result}", null) },
+        processResult = { logger.log(Logger.Severity.INFO, { "Result of a completion message has been ignored: ${it.result}" }, null) },
     )
 
     final override suspend fun <T : Any> invoke(
@@ -203,7 +203,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
         if (message is HubMessage.Invocation.Blocking && !resultProviderRegistry.contains(message.target)) {
             logger.log(
                 severity = Logger.Severity.WARNING,
-                message = "There is no result provider for '${message.target}' despite server expecting it.",
+                message = { "There is no result provider for '${message.target}' despite server expecting it." },
                 cause = null,
             )
 
@@ -236,7 +236,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
                     } catch (ex: Exception) {
                         logger.log(
                             severity = Logger.Severity.ERROR,
-                            message = "Getting result for non-blocking invocation of '${message.target}' method has thrown an exception",
+                            message = { "Getting result for non-blocking invocation of '${message.target}' method has thrown an exception" },
                             cause = ex,
                         )
                     }
@@ -248,7 +248,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
                     } catch (ex: Exception) {
                         logger.log(
                             severity = Logger.Severity.ERROR,
-                            message = "Getting result for blocking invocation of '${message.target}' method has thrown an exception",
+                            message = { "Getting result for blocking invocation of '${message.target}' method has thrown an exception" },
                             cause = ex,
                         )
 
@@ -278,12 +278,14 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
             } catch (ex: Exception) {
                 logger.log(
                     severity = Logger.Severity.ERROR,
-                    message = "Getting result for ${
-                        when (message) {
-                            is HubMessage.Invocation.Blocking -> "blocking"
-                            is HubMessage.Invocation.NonBlocking -> "non-blocking"
-                        }
-                    } invocation of '${message.target}' method has thrown an exception",
+                    message = {
+                        "Getting result for ${
+                            when (message) {
+                                is HubMessage.Invocation.Blocking -> "blocking"
+                                is HubMessage.Invocation.NonBlocking -> "non-blocking"
+                            }
+                        } invocation of '${message.target}' method has thrown an exception"
+                    },
                     cause = ex,
                 )
                 null
@@ -301,6 +303,6 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
                     .onCompletion { resultProviderRegistry.remove(target) }
             }
             .filter { it.target == target }
-            .onEach { logger.log(Logger.Severity.INFO, "Received invocation: $it", null) }
+            .onEach { logger.log(Logger.Severity.INFO, { "Received invocation: $it" }, null) }
     }
 }
