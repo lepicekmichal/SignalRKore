@@ -225,7 +225,7 @@ class HubConnection private constructor(
             }
         }
 
-        handleHandshake(transport)
+        val handshakeRemaining = handleHandshake(transport)
 
         _connectionState.value = HubConnectionState.CONNECTED
 
@@ -252,6 +252,7 @@ class HubConnection private constructor(
 
         scope.launch {
             transport.receive()
+                .onStart { handshakeRemaining?.let { emit(it) } }
                 .catch {
                     if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(it.message)
                     else stop(it.message)
@@ -339,13 +340,14 @@ class HubConnection private constructor(
         parameters.appendIfNameAbsent("negotiateVersion", NEGOTIATE_VERSION.toString())
     }.buildString()
 
-    private suspend fun handleHandshake(transport: Transport) {
-        val handshakeCandidate = String(transport.receive().onEmpty { delay(handshakeResponseTimeout) }.first())
+    private suspend fun handleHandshake(transport: Transport): ByteArray? {
+        val payload = String(transport.receive().onEmpty { delay(handshakeResponseTimeout) }.first())
 
-        if (handshakeCandidate.last() != RECORD_SEPARATOR) throw RuntimeException("HubMessage is incomplete.")
+        val separatorIndex = payload.indexOf(RECORD_SEPARATOR)
+        if (separatorIndex == -1) throw RuntimeException("HubMessage is incomplete.")
 
         val handshake = try {
-            Json.decodeFromString<HandshakeResponse>(handshakeCandidate.substring(0, handshakeCandidate.lastIndex))
+            Json.decodeFromString<HandshakeResponse>(payload.substring(0, separatorIndex))
         } catch (ex: SerializationException) {
             throw RuntimeException("An invalid handshake response was received from the server.", ex)
         }
@@ -353,6 +355,8 @@ class HubConnection private constructor(
         if (handshake.error != null) {
             throw RuntimeException("Error in handshake ${handshake.error}")
         }
+
+        return payload.substring(separatorIndex + 1).takeIf { it.isNotEmpty() }?.toByteArray()
     }
 
     private suspend fun reconnect(errorMessage: String? = null) {
