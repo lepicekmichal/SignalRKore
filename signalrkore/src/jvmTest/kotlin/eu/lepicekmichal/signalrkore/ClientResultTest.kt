@@ -1,6 +1,7 @@
 package eu.lepicekmichal.signalrkore
 
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -8,7 +9,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlin.test.Ignore
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -138,7 +139,6 @@ class ClientResultTest : HubTest() {
         connection.stop()
     }
 
-    @Ignore
     @Test
     fun `result handler keeps working after restart`() = runBlocking<Unit> {
         val connection = connection(startHubSending("""{"type":1,"invocationId":"1","target":"Answer","arguments":[]}"""))
@@ -153,6 +153,28 @@ class ClientResultTest : HubTest() {
         connection.start()
 
         assertEquals(Json.parseToJsonElement("""{"type":3,"invocationId":"1","result":42}"""), nextMessage())
+        connection.stop()
+    }
+
+    @Test
+    fun `result handler keeps working after reconnect`() = runBlocking<Unit> {
+        val connections = AtomicInteger(0)
+        val port = startHub {
+            if (connections.incrementAndGet() == 1) {
+                delay(200)
+                cancel()
+            } else {
+                sendMessage("""{"type":1,"invocationId":"1","target":"Answer","arguments":[]}""")
+                while (true) received.send(receiveMessage())
+            }
+        }
+        val connection = connection(port) { automaticReconnect = AutomaticReconnect.Custom { _, _ -> 10L } }
+        connection.on("Answer", Int.serializer()) { 42 }
+
+        connection.start()
+
+        assertEquals(Json.parseToJsonElement("""{"type":3,"invocationId":"1","result":42}"""), nextMessage())
+        assertEquals(2, connections.get())
         connection.stop()
     }
 }

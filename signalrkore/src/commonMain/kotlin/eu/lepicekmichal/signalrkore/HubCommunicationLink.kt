@@ -1,6 +1,9 @@
 package eu.lepicekmichal.signalrkore
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +30,8 @@ import kotlinx.serialization.json.JsonElement
 abstract class HubCommunicationLink(private val json: Json) : HubCommunication() {
 
     protected abstract val scope: CoroutineScope
+
+    private val handlerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val receivedInvocations = MutableSharedFlow<HubMessage.Invocation>()
 
@@ -264,7 +269,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
         resultSerializer: KSerializer<T>,
         callback: suspend (HubMessage.Invocation) -> T,
     ) {
-        collectInScope(scope) { message ->
+        collectInScope(handlerScope) { message ->
             when (message) {
                 is HubMessage.Invocation.NonBlocking -> {
                     try {
