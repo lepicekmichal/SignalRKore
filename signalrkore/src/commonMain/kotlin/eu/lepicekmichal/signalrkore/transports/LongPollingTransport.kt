@@ -1,5 +1,6 @@
 package eu.lepicekmichal.signalrkore.transports
 
+import eu.lepicekmichal.signalrkore.HttpRequestException
 import eu.lepicekmichal.signalrkore.Transport
 import eu.lepicekmichal.signalrkore.utils.headers
 import io.ktor.client.HttpClient
@@ -51,7 +52,7 @@ internal class LongPollingTransport(private val headers: Map<String, String>, pr
 
         if (response.status != HttpStatusCode.OK) {
             //log("Unexpected response code ${response.status.value}")
-            throw RuntimeException("Failed to connect.")
+            throw HttpRequestException("Failed to connect.", response.status.value)
         }
 
         active = true
@@ -83,7 +84,7 @@ internal class LongPollingTransport(private val headers: Map<String, String>, pr
                                 //log("Poll timed out, reissuing.")
                             }
                         }
-                        else -> throw RuntimeException("Unexpected response code ${response.status.value} while polling.")
+                        else -> throw HttpRequestException("Unexpected response code ${response.status.value} while polling.", response.status.value)
                     }
                 }
                 incoming.close()
@@ -99,9 +100,13 @@ internal class LongPollingTransport(private val headers: Map<String, String>, pr
     override suspend fun send(message: ByteArray) {
         if (!active) throw IllegalStateException("Cannot send unless the transport is active")
 
-        client.post(url) {
+        val response = client.post(url) {
             headers(this@LongPollingTransport.headers)
             setBody(message)
+        }
+
+        if (response.status != HttpStatusCode.OK && response.status != HttpStatusCode.Conflict) {
+            throw HttpRequestException("Unexpected response code ${response.status.value} while sending.", response.status.value)
         }
     }
 

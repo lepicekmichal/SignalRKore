@@ -36,13 +36,12 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.io.IOException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration
@@ -162,11 +161,19 @@ class HubConnection private constructor(
         logger = logger,
     )
 
-    suspend fun start() = start(reconnectionAttempt = false)
-
-    private suspend fun start(reconnectionAttempt: Boolean = false) {
+    suspend fun start() {
         if (connectionState.value != HubConnectionState.DISCONNECTED && connectionState.value != HubConnectionState.RECONNECTING) return
 
+        try {
+            connect()
+        } catch (ex: Exception) {
+            if (ex is CancellationException) scope.launch { close(cause = null, message = "Start was cancelled") }
+            else close(cause = ex, message = "Failed to start connection: ${ex.message}")
+            throw ex
+        }
+    }
+
+    private suspend fun connect() {
         if (connectionState.value == HubConnectionState.DISCONNECTED) {
             _connectionState.value = HubConnectionState.CONNECTING
         }
@@ -179,16 +186,7 @@ class HubConnection private constructor(
         } ?: headers
 
         val negotiation = if (!skipNegotiate) {
-            try {
-                startNegotiate(url = baseUrl, headers = headersWithAccessToken, negotiateAttempts = 0)
-            } catch (ex: Exception) {
-                if (!reconnectionAttempt) {
-                    handleConnectionFailure(ex.message)
-                    return
-                } else {
-                    throw ex
-                }
-            }
+            startNegotiate(url = baseUrl, headers = headersWithAccessToken, negotiateAttempts = 0)
         } else {
             Negotiation(transport = TransportEnum.WebSockets, url = baseUrl, headers = headersWithAccessToken)
         }
@@ -203,40 +201,16 @@ class HubConnection private constructor(
 
         this.transport = transport
 
-        try {
-            transport.start(negotiation.url)
-        } catch (ex: Exception) {
-            if (!reconnectionAttempt) {
-                handleConnectionFailure(ex.message)
-                return
-            } else {
-                throw ex
-            }
-        }
+        transport.start(negotiation.url)
 
         if (connectionState.value != HubConnectionState.CONNECTING && connectionState.value != HubConnectionState.RECONNECTING) {
             throw RuntimeException("Connection closed while trying to connect.")
         }
 
-        withContext(Dispatchers.IO) {
-            launch {
-                val handshake = Json.encodeToString(Handshake(protocol = protocol.name, version = protocol.version)) + RECORD_SEPARATOR
-                transport.send(handshake.toByteArray())
-            }.invokeOnCompletion {
-                if (it != null) _connectionState.value = HubConnectionState.DISCONNECTED
-            }
-        }
+        val handshake = Json.encodeToString(Handshake(protocol = protocol.name, version = protocol.version)) + RECORD_SEPARATOR
+        transport.send(handshake.toByteArray())
 
-        val handshakeRemaining = try {
-            handleHandshake(transport)
-        } catch (ex: Exception) {
-            if (!reconnectionAttempt) {
-                handleConnectionFailure(ex.message)
-                return
-            } else {
-                throw ex
-            }
-        }
+        val handshakeRemaining = handleHandshake(transport)
 
         _connectionState.value = HubConnectionState.CONNECTED
 
@@ -244,12 +218,12 @@ class HubConnection private constructor(
             scope.launch {
                 pingTicker
                     .onEach { sendHubMessage(message = HubMessage.Ping()) }
-                    .catch { handleConnectionFailure(it.message) }
+                    .catch { handleConnectionLost(it) }
                     .collect()
             }
             scope.launch {
                 serverTimeoutTicker
-                    .catch { handleConnectionFailure(it.message) }
+                    .catch { handleConnectionLost(it) }
                     .collect()
             }
         }
@@ -260,14 +234,17 @@ class HubConnection private constructor(
             transport.receive()
                 .onStart { handshakeRemaining?.let { emit(it) } }
                 .onEach { processReceived(it) }
-                .catch { handleConnectionFailure(it.message) }
+                .onCompletion { if (it == null) handleConnectionLost(cause = null, message = "Server closed the connection") }
+                .catch { handleConnectionLost(it) }
                 .collect()
         }
     }
 
-    private suspend fun handleConnectionFailure(errorMessage: String?) {
-        if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(errorMessage)
-        else stop(errorMessage)
+    private suspend fun handleConnectionLost(cause: Throwable?, message: String? = null) {
+        if (connectionState.value != HubConnectionState.CONNECTED) return
+
+        if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(cause, message)
+        else close(cause, message)
     }
 
     private suspend fun startNegotiate(
@@ -339,7 +316,7 @@ class HubConnection private constructor(
         }
 
         if (response.status != HttpStatusCode.OK)
-            throw RuntimeException("Unexpected status code returned from negotiate: ${response.status} ${response.status.description}.")
+            throw HttpRequestException("Unexpected status code returned from negotiate: ${response.status} ${response.status.description}.", response.status.value)
 
         return response.body()
     }
@@ -370,8 +347,8 @@ class HubConnection private constructor(
         return payload.substring(separatorIndex + 1).takeIf { it.isNotEmpty() }?.toByteArray()
     }
 
-    private suspend fun reconnect(errorMessage: String? = null) {
-        stop(errorMessage)
+    private suspend fun reconnect(cause: Throwable?, message: String? = null) {
+        close(cause, message)
 
         if (automaticReconnect !is AutomaticReconnect.Custom) return
 
@@ -380,6 +357,7 @@ class HubConnection private constructor(
         scope.launch(Dispatchers.IO) {
             val mark = TimeSource.Monotonic.markNow()
             var retryCount = 0
+            var lastError = cause
 
             while (true) {
                 val delayTime = try {
@@ -396,20 +374,18 @@ class HubConnection private constructor(
 
                 try {
                     logger.log(Logger.Severity.INFO, { "[$baseUrl] Reconnecting - #${retryCount} attempt" }, null)
-                    start(reconnectionAttempt = true)
+                    connect()
                 } catch (ex: Exception) {
-                    logger.log(Logger.Severity.INFO, { "[$baseUrl] Reconnecting error" }, ex)
+                    ex.rethrowIfCancelled()
+                    logger.log(Logger.Severity.WARNING, { "[$baseUrl] Reconnecting error" }, ex)
+                    lastError = ex
                     continue
                 }
                 break
             }
 
             if (_connectionState.value != HubConnectionState.CONNECTED) {
-                logger.log(Logger.Severity.INFO, { "[$baseUrl] Reconnection unsuccessful, terminating" }, null)
-
-                _connectionState.value = HubConnectionState.DISCONNECTED
-
-                job.cancelChildren()
+                close(lastError, message = "Reconnection unsuccessful, terminating")
             }
         }.invokeOnCompletion {
             if (it != null) _connectionState.value = HubConnectionState.DISCONNECTED
@@ -417,11 +393,20 @@ class HubConnection private constructor(
     }
 
     suspend fun stop(errorMessage: String? = null) {
+        if (connectionState.value == HubConnectionState.CONNECTED) sendCloseMessage()
+
+        close(cause = null, message = errorMessage)
+    }
+
+    private suspend fun close(cause: Throwable?, message: String? = null) {
         if (connectionState.value == HubConnectionState.DISCONNECTED) return
 
         _connectionState.value = HubConnectionState.DISCONNECTED
 
-        logger.log(Logger.Severity.INFO, { "[$baseUrl] ${errorMessage ?: "Stopping connection"}" }, null)
+        if (cause != null) logger.log(Logger.Severity.ERROR, { "[$baseUrl] ${message ?: cause.message}" }, cause)
+        else logger.log(Logger.Severity.INFO, { "[$baseUrl] ${message ?: "Stopping connection"}" }, null)
+
+        cancelPendingInvocations(cause)
 
         try {
             stopTransport()
@@ -430,13 +415,26 @@ class HubConnection private constructor(
         }
     }
 
+    private suspend fun sendCloseMessage() {
+        try {
+            transport?.send(protocol.writeMessage(HubMessage.Close()))
+        } catch (ex: Exception) {
+            ex.rethrowIfCancelled()
+            logger.log(Logger.Severity.WARNING, { "[$baseUrl] Failed to send close message" }, ex)
+        }
+    }
+
     private suspend fun stopTransport() {
         try {
             transport?.stop()
         } catch (ex: Exception) {
-            if (ex is CancellationException) currentCoroutineContext().ensureActive()
+            ex.rethrowIfCancelled()
             logger.log(Logger.Severity.WARNING, { "[$baseUrl] Failed to stop transport" }, ex)
         }
+    }
+
+    private suspend fun Exception.rethrowIfCancelled() {
+        if (this is CancellationException) currentCoroutineContext().ensureActive()
     }
 
     override fun sendHubMessage(message: HubMessage) {
@@ -455,10 +453,9 @@ class HubConnection private constructor(
 
                 resetKeepAlive()
             } catch (e: Exception) {
+                e.rethrowIfCancelled()
                 logger.log(Logger.Severity.ERROR, { "Failed to send hub data: $message" }, e)
-                if (e is IOException) {
-                    handleConnectionFailure(e.message)
-                }
+                handleConnectionLost(e)
             }
         }
     }
@@ -470,8 +467,9 @@ class HubConnection private constructor(
         messages.forEach { message ->
             when (message) {
                 is HubMessage.Close -> {
-                    if (message.allowReconnect && automaticReconnect !is AutomaticReconnect.Inactive) reconnect(message.error)
-                    else stop(message.error)
+                    val cause = message.error?.let { RuntimeException("Server returned an error on close: $it") }
+                    if (message.allowReconnect && automaticReconnect !is AutomaticReconnect.Inactive) reconnect(cause, "Server closed the connection")
+                    else close(cause, "Server closed the connection")
                 }
 
                 is HubMessage.Invocation -> processReceivedInvocation(message)

@@ -12,6 +12,8 @@ Before you can configure reconnection, you need to:
 
 See the [Connection](connection.md) guide for details.
 
+Automatic reconnection only applies to a connection that was already established. If the first `connection.start()` fails, it throws an exception and no reconnection is attempted.
+
 ## Reconnection Policies
 
 SignalRKore provides several reconnection policies:

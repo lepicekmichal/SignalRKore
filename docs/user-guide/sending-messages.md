@@ -117,12 +117,23 @@ try {
 }
 ```
 
+When invoking a method, the server may return an error or the connection may close before the result arrives:
+
+```kotlin
+try {
+    val result = connection.invoke("echo", String.serializer(), "Hello, SignalR!")
+} catch (ex: HubException) {
+    println("Server returned an error: ${ex.message}")
+} catch (ex: ConnectionClosedException) {
+    println("Connection was closed before the result arrived: ${ex.cause}")
+}
+```
+
 Common errors include:
 
 - Connection not established
-- Hub method not found
-- Parameter type mismatch
-- Server-side errors
+- `HubException` - hub method not found, parameter type mismatch or other server-side errors
+- `ConnectionClosedException` - connection closed while waiting for the result
 
 ## Connection State Check
 

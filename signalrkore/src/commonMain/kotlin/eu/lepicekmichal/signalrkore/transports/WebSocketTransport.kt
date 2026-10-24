@@ -6,9 +6,10 @@ import eu.lepicekmichal.signalrkore.Transport
 import eu.lepicekmichal.signalrkore.utils.headers
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.timeout
+import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.webSocketSession
 import io.ktor.utils.io.core.toByteArray
-import io.ktor.websocket.WebSocketSession
+import io.ktor.websocket.CloseReason
 import io.ktor.websocket.close
 import io.ktor.websocket.readBytes
 import io.ktor.websocket.send
@@ -16,6 +17,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -26,7 +28,7 @@ internal class WebSocketTransport(
     private val client: HttpClient,
 ) : Transport {
 
-    private var session: WebSocketSession? = null
+    private var session: DefaultClientWebSocketSession? = null
 
     private fun formatUrl(url: String): String = when {
         url.startsWith(HTTPS) -> WSS + url.substring(HTTPS.length)
@@ -56,14 +58,22 @@ internal class WebSocketTransport(
         }
     }
 
-    override fun receive(): Flow<ByteArray> = session?.incoming
-        ?.receiveAsFlow()
-        ?.map { it.readBytes() }
-        ?.catch {
-            if (it is EOFException) emit((Json.encodeToString(HubMessage.Close()) + RECORD_SEPARATOR).toByteArray())
-            else throw it
-        }
-        ?: throw IllegalStateException("WebSocket connection has not been started")
+    override fun receive(): Flow<ByteArray> = session?.let { session ->
+        session.incoming
+            .receiveAsFlow()
+            .map { it.readBytes() }
+            .onCompletion { cause ->
+                if (cause != null || !session.closeReason.isCompleted) return@onCompletion
+                val reason = session.closeReason.await()
+                if (reason != null && reason.code != CloseReason.Codes.NORMAL.code) {
+                    throw RuntimeException("WebSocket closed with an error: $reason")
+                }
+            }
+            .catch {
+                if (it is EOFException) emit((Json.encodeToString(HubMessage.Close()) + RECORD_SEPARATOR).toByteArray())
+                else throw it
+            }
+    } ?: throw IllegalStateException("WebSocket connection has not been started")
 
     override suspend fun stop() {
         session?.close()

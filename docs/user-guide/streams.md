@@ -182,8 +182,8 @@ try {
 
 Common errors include:
 
-- Connection lost
-- Stream cancelled
+- `ConnectionClosedException` - connection lost before the stream completed
+- `HubException` - the server completed the stream with an error
 - Parameter type mismatch
 - Serialization errors
 

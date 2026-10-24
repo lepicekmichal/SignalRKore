@@ -30,7 +30,7 @@ scope.launch {
 }
 ```
 
-The `start` method is suspending and will complete when the connection is established or throw an exception if the connection fails.
+The `start` method is suspending and will complete when the connection is established or throw an exception if the connection fails. After a failed start, the connection is back in the `DISCONNECTED` state, and automatic reconnect is not used for it. If the negotiate request fails, `start` throws `HttpRequestException` with the HTTP `statusCode`.
 
 ### Monitoring Connection State
 
@@ -53,7 +53,7 @@ This is useful for updating your UI based on the connection state or for impleme
 
 ### Stopping a Connection
 
-When you're done with the connection, you should stop it to release resources:
+When you're done with the connection, you should stop it to release resources. Stopping sends a close message to the server, cancels pending `invoke` calls and streams with `ConnectionClosedException`, and closes the transport:
 
 ```kotlin
 scope.launch {
@@ -202,6 +202,8 @@ logger = Logger { severity, message, cause ->
     }
 }
 ```
+
+When the connection is closed because of an error (the server dropped it, the server timeout elapsed, automatic reconnect gave up), it is logged with `ERROR` severity and the original exception as `cause`.
 
 ## Complete Example
 
