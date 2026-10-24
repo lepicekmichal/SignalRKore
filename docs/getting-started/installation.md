@@ -24,6 +24,18 @@ dependencies {
 }
 ```
 
+### MessagePack protocol
+
+The MessagePack hub protocol is published as a separate artifact. Add it next to the core library if you want to use it:
+
+```kotlin
+dependencies {
+    implementation("eu.lepicekmichal.signalrkore:signalrkore-msgpack:${signalrkoreVersion}")
+}
+```
+
+See [Protocol](../api/protocol.md#messagepackhubprotocol) for how to use it.
+
 ## Maven
 
 Add the following to your `pom.xml` file:

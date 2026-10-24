@@ -159,19 +159,57 @@ httpClient = HttpClient(OkHttp) {
 
 ### Protocol
 
-You can specify a custom hub protocol:
+You can specify the hub protocol:
 
 ```kotlin
-protocol = JsonHubProtocol()
+protocol = JsonHubProtocol(logger)
 ```
 
-Currently, only the `JsonHubProtocol` is supported.
+Two protocols are available:
+
+- `JsonHubProtocol` (default) - JSON messages, part of the core `signalrkore` artifact
+- `MessagePackHubProtocol` - binary MessagePack messages, in the `signalrkore-msgpack` artifact
 
 See the [Protocol](../api/protocol.md) API reference for more details.
 
+### MessagePack
+
+To use the MessagePack protocol, add the `signalrkore-msgpack` artifact:
+
+```kotlin
+implementation("eu.lepicekmichal.signalrkore:signalrkore-msgpack:${signalrkoreVersion}")
+```
+
+and set the protocol:
+
+```kotlin
+protocol = MessagePackHubProtocol(logger)
+```
+
+The server has to enable it with `AddMessagePackProtocol()`. Keep in mind that:
+
+- Server-Sent Events cannot carry binary data, so the connection uses WebSockets or Long Polling.
+- Property names are case sensitive. Map Kotlin properties to PascalCase .NET properties with `@SerialName`.
+- Enums are sent as strings, `ByteArray` as binary data and `kotlin.time.Instant` as a MessagePack timestamp, which .NET reads as a `DateTime`.
+
+Payloads are encoded by the `MessagePack` format, which you can configure and pass to the protocol:
+
+```kotlin
+protocol = MessagePackHubProtocol(
+    logger = logger,
+    messagePack = MessagePack {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        serializersModule = SerializersModule {
+            contextual(UUID::class) { UUIDSerializer }
+        }
+    },
+)
+```
+
 ### JSON Serialization
 
-You can provide a custom JSON serializer:
+You can provide a custom JSON serializer for the payloads of the default `JsonHubProtocol`:
 
 ```kotlin
 json = Json {
@@ -181,7 +219,7 @@ json = Json {
 }
 ```
 
-This is useful if you need to configure the JSON serializer with custom settings or modules.
+This is useful if you need to configure the JSON serializer with custom settings or modules. The `json` instance is also used to read the negotiate response with the default HTTP client. When you set the `protocol` yourself, pass the `Json` instance to the protocol: `JsonHubProtocol(logger, json)`.
 
 For example, you can register custom serializers for specific types:
 
@@ -281,7 +319,6 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
     }
 
     // Protocol and serialization
-    protocol = JsonHubProtocol()
     json = Json {
         ignoreUnknownKeys = true
         isLenient = true

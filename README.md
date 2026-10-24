@@ -28,7 +28,7 @@ SignalRKore is a Kotlin Multiplatform client library for ASP.NET Core SignalR. I
 | SSE                        |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
 | Connection status          |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
 | Logging                    |                                            SLF4J                                             |          Custom interface           |
-| MsgPack                    |                                      :heavy_check_mark:                                      |      :heavy_multiplication_x:       |
+| MsgPack                    |                                      :heavy_check_mark:                                      |         :heavy_check_mark:          |
 | Tested by time & community |                                      :heavy_check_mark:                                      |      :heavy_multiplication_x:       |
 
 ## Quick Example

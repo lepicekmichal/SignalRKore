@@ -172,10 +172,10 @@ This is useful if you need to configure the HTTP client with custom settings or 
 You can specify a custom hub protocol:
 
 ```kotlin
-protocol = JsonHubProtocol()
+protocol = JsonHubProtocol(logger)
 ```
 
-Currently, only the `JsonHubProtocol` is supported.
+`MessagePackHubProtocol` from the `signalrkore-msgpack` artifact is available too, see [Configuration](configuration.md#messagepack).
 
 ### JSON Serialization
 
