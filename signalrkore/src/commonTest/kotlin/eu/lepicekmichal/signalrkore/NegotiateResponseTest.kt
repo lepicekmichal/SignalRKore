@@ -1,7 +1,6 @@
 package eu.lepicekmichal.signalrkore
 
 import kotlinx.serialization.json.Json
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -34,7 +33,6 @@ class NegotiateResponseTest {
         )
     }
 
-    @Ignore
     @Test
     fun version0WithoutConnectionToken() {
         val response = assertIs<NegotiateResponse.Success>(
@@ -45,7 +43,6 @@ class NegotiateResponseTest {
         assertEquals(0, response.negotiateVersion)
     }
 
-    @Ignore
     @Test
     fun missingNegotiateVersion() {
         val response = assertIs<NegotiateResponse.Success>(
@@ -63,7 +60,6 @@ class NegotiateResponseTest {
         )
     }
 
-    @Ignore
     @Test
     fun redirectWithoutAccessToken() {
         val response = assertIs<NegotiateResponse.Redirect>(decode("""{"url":"https://myapp.com/chat"}"""))

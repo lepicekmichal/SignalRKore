@@ -292,7 +292,11 @@ class HubConnection private constructor(
                     else -> response.selectTransport(transportEnum)
                 } ?: throw RuntimeException("There were no compatible transports on the server.")
 
-                val connectionToken = if (response.negotiateVersion > 0) response.connectionToken else response.connectionId
+                val connectionToken = if (response.negotiateVersion > 0) {
+                    response.connectionToken ?: throw RuntimeException("Negotiate response is missing the connection token.")
+                } else {
+                    response.connectionId
+                }
                 _connectionId.update { response.connectionId }
                 val finalUrl: String = URLBuilder(url).apply { parameters.append("id", connectionToken) }.buildString()
 

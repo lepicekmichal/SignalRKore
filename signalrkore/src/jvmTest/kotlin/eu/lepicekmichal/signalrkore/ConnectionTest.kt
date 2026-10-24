@@ -20,7 +20,6 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -158,6 +157,21 @@ class ConnectionTest : HubTest() {
     }
 
     @Test
+    fun `negotiate version 1 without connection token fails start`() = runBlocking<Unit> {
+        val port = serve {
+            routing {
+                negotiate(response = """{"negotiateVersion":1,"connectionId":"abc","availableTransports":[{"transport":"WebSockets","transferFormats":["Text"]}]}""")
+            }
+        }
+        val connection = connection(port)
+
+        val ex = assertFailsWith<RuntimeException> { connection.start() }
+
+        assertEquals("Negotiate response is missing the connection token.", ex.message)
+        assertEquals(HubConnectionState.DISCONNECTED, connection.connectionState.value)
+    }
+
+    @Test
     fun `negotiate redirect is followed with its access token`() = runBlocking<Unit> {
         val authorization = CompletableDeferred<String?>()
         val port = serve {
@@ -184,7 +198,6 @@ class ConnectionTest : HubTest() {
         connection.stop()
     }
 
-    @Ignore
     @Test
     fun `negotiate redirecting forever fails after 100 attempts`() = runBlocking<Unit> {
         val negotiations = AtomicInteger(0)

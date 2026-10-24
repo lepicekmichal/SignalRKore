@@ -10,14 +10,14 @@ internal sealed class NegotiateResponse {
 
     @Serializable
     data class Success(
-        val connectionToken: String,
+        val connectionToken: String? = null,
         val connectionId: String,
-        val negotiateVersion: Int,
+        val negotiateVersion: Int = 0,
         val availableTransports: List<AvailableTransport>,
     ) : NegotiateResponse()
 
     @Serializable
-    data class Redirect(val url: String, val accessToken: String?) : NegotiateResponse()
+    data class Redirect(val url: String, val accessToken: String? = null) : NegotiateResponse()
 
     @Serializable
     data class Error(val error: String) : NegotiateResponse()
