@@ -24,10 +24,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 
-abstract class HubCommunicationLink(private val json: Json) : HubCommunication() {
+abstract class HubCommunicationLink : HubCommunication() {
 
     protected abstract val scope: CoroutineScope
 
@@ -41,9 +39,12 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
 
     protected abstract val logger: Logger
 
-    final override fun <T : Any> T.toJson(serializer: KSerializer<T>): JsonElement = json.encodeToJsonElement(serializer, this)
+    final override fun <T : Any> T.toHubValue(serializer: KSerializer<T>): HubValue = HubValue.Encodable(this, serializer)
 
-    final override fun <T> JsonElement.fromJson(deserializer: KSerializer<T>): T = json.decodeFromJsonElement(deserializer, this)
+    final override fun <T> HubValue.fromHubValue(deserializer: KSerializer<T>): T = when (this) {
+        is HubValue.Decodable -> decode(deserializer)
+        else -> throw IllegalArgumentException("$this is not a received value and cannot be decoded")
+    }
 
     protected abstract fun sendHubMessage(message: HubMessage)
 
@@ -62,7 +63,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
         }
     }
 
-    final override fun send(method: String, args: List<JsonElement>, streams: List<Flow<JsonElement>>) {
+    final override fun send(method: String, args: List<HubValue>, streams: List<Flow<HubValue>>) {
         connectedCheck("send")
 
         val streamIds = streams.map { UUID.randomUUID() }
@@ -75,7 +76,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
         launchStreams(streamIds, streams)
     }
 
-    private fun launchStreams(streamIds: List<String>, uploadStreams: List<Flow<JsonElement>>) {
+    private fun launchStreams(streamIds: List<String>, uploadStreams: List<Flow<HubValue>>) {
         streamIds.zip(uploadStreams) { id, stream ->
             scope.launch {
                 stream
@@ -90,7 +91,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
         }
     }
 
-    final override suspend fun invoke(method: String, args: List<JsonElement>, streams: List<Flow<JsonElement>>) = internalInvoke(
+    final override suspend fun invoke(method: String, args: List<HubValue>, streams: List<Flow<HubValue>>) = internalInvoke(
         method = method,
         args = args,
         uploadStreams = streams,
@@ -101,8 +102,8 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
     final override suspend fun <T : Any> invoke(
         method: String,
         resultSerializer: KSerializer<T>,
-        args: List<JsonElement>,
-        streams: List<Flow<JsonElement>>,
+        args: List<HubValue>,
+        streams: List<Flow<HubValue>>,
     ): T = internalInvoke(
         method = method,
         args = args,
@@ -110,7 +111,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
         processSimple = { throw RuntimeException("The completion message has no result, but one is expected") },
         processResult = {
             try {
-                it.result.fromJson(resultSerializer)
+                it.result.fromHubValue(resultSerializer)
             } catch (ex: SerializationException) {
                 throw RuntimeException("Completion result could not be parsed as $resultSerializer: ${it.result}", ex)
             } catch (ex: IllegalArgumentException) {
@@ -121,8 +122,8 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
 
     private suspend fun <T : Any> internalInvoke(
         method: String,
-        args: List<JsonElement>,
-        uploadStreams: List<Flow<JsonElement>>,
+        args: List<HubValue>,
+        uploadStreams: List<Flow<HubValue>>,
         processSimple: (HubMessage.Completion.Simple) -> T,
         processResult: (HubMessage.Completion.Resulted) -> T,
     ): T {
@@ -154,8 +155,8 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
     final override fun <T : Any> stream(
         method: String,
         itemSerializer: KSerializer<T>,
-        args: List<JsonElement>,
-        streams: List<Flow<JsonElement>>,
+        args: List<HubValue>,
+        streams: List<Flow<HubValue>>,
     ): Flow<T> {
         connectedCheck("stream")
 
@@ -182,7 +183,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
                     when (message) {
                         is HubMessage.StreamItem -> emit(
                             try {
-                                message.item.fromJson(itemSerializer)
+                                message.item.fromHubValue(itemSerializer)
                             } catch (ex: SerializationException) {
                                 throw RuntimeException("Completion result could not be parsed as $itemSerializer: ${message.item}", ex)
                             } catch (ex: IllegalArgumentException) {
@@ -285,7 +286,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
 
                 is HubMessage.Invocation.Blocking -> {
                     val result = try {
-                        callback(message).toJson(resultSerializer)
+                        callback(message).toHubValue(resultSerializer)
                     } catch (ex: Exception) {
                         logger.log(
                             severity = Logger.Severity.ERROR,

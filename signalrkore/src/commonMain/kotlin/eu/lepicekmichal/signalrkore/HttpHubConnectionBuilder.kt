@@ -45,7 +45,8 @@ class HttpHubConnectionBuilder(private val url: String) {
     var headers: MutableMap<String, String> = HashMap()
 
     /**
-     * Json instance for (de)serializing custom models coming through as payloads
+     * Json instance for (de)serializing custom models coming through as payloads of the default [JsonHubProtocol].
+     * It is not used when a custom [protocol] is set.
      */
     var json: Json = Json
 
@@ -79,7 +80,7 @@ class HttpHubConnectionBuilder(private val url: String) {
         skipNegotiate = skipNegotiate,
         automaticReconnect = automaticReconnect,
         httpClient = httpClient,
-        protocol = if (::protocol.isInitialized) protocol else JsonHubProtocol(logger),
+        protocol = if (::protocol.isInitialized) protocol else JsonHubProtocol(logger, json),
         handshakeResponseTimeout = handshakeResponseTimeout,
         headers = headers,
         accessTokenProvider = accessTokenProvider,

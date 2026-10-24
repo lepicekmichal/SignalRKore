@@ -19,7 +19,6 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskAction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.json.JsonElement
 
 open class HubCommunicationTask : DefaultTask() {
     private val output: Provider<Directory> = project.layout.buildDirectory.dir("generated/kotlin")
@@ -35,18 +34,18 @@ open class HubCommunicationTask : DefaultTask() {
                 TypeSpec.classBuilder("HubCommunication")
                     .addModifiers(KModifier.ABSTRACT)
                     .addFunction(
-                        FunSpec.builder("toJson")
+                        FunSpec.builder("toHubValue")
                             .addTypeVariable(genericTypeVariableT)
                             .receiver(genericTypeVariableT)
                             .addParameter("serializer", genericTypeVariableT.inKSerializer)
                             .addModifiers(KModifier.PROTECTED, KModifier.ABSTRACT)
-                            .returns(JsonElement::class)
+                            .returns(hubValue)
                             .build()
                     )
                     .addFunction(
-                        FunSpec.builder("fromJson")
+                        FunSpec.builder("fromHubValue")
                             .addTypeVariable(genericTypeVariableT.copy(bounds = emptyList()))
-                            .receiver(JsonElement::class)
+                            .receiver(hubValue)
                             .addParameter("deserializer", genericTypeVariableT.inKSerializer)
                             .addModifiers(KModifier.PROTECTED, KModifier.ABSTRACT)
                             .returns(genericTypeVariableT)
@@ -55,12 +54,12 @@ open class HubCommunicationTask : DefaultTask() {
                     .addFunction(
                         FunSpec.builder("send")
                             .addParameter("method", String::class)
-                            .addParameter(name = "args", type = List::class.asTypeName().parameterizedBy(JsonElement::class.asTypeName()))
+                            .addParameter(name = "args", type = List::class.asTypeName().parameterizedBy(hubValue))
                             .addParameter(
                                 parameterSpec = ParameterSpec.builder(
                                     name = "streams",
                                     type = List::class.asTypeName().parameterizedBy(
-                                        Flow::class.asTypeName().parameterizedBy(JsonElement::class.asTypeName())
+                                        Flow::class.asTypeName().parameterizedBy(hubValue)
                                     ),
                                 )
                                     .defaultValue("%M()", MemberName("kotlin.collections", "emptyList"))
@@ -72,12 +71,12 @@ open class HubCommunicationTask : DefaultTask() {
                     .addFunction(
                         FunSpec.builder("invoke")
                             .addParameter("method", String::class)
-                            .addParameter(name = "args", type = List::class.asTypeName().parameterizedBy(JsonElement::class.asTypeName()))
+                            .addParameter(name = "args", type = List::class.asTypeName().parameterizedBy(hubValue))
                             .addParameter(
                                 parameterSpec = ParameterSpec.builder(
                                     name = "streams",
                                     type = List::class.asTypeName().parameterizedBy(
-                                        Flow::class.asTypeName().parameterizedBy(JsonElement::class.asTypeName())
+                                        Flow::class.asTypeName().parameterizedBy(hubValue)
                                     ),
                                 )
                                     .defaultValue("%M()", MemberName("kotlin.collections", "emptyList"))
@@ -91,12 +90,12 @@ open class HubCommunicationTask : DefaultTask() {
                             .addTypeVariable(genericTypeVariableT)
                             .addParameter("method", String::class)
                             .addParameter("resultSerializer", genericTypeVariableT.inKSerializer)
-                            .addParameter(name = "args", type = List::class.asTypeName().parameterizedBy(JsonElement::class.asTypeName()))
+                            .addParameter(name = "args", type = List::class.asTypeName().parameterizedBy(hubValue))
                             .addParameter(
                                 parameterSpec = ParameterSpec.builder(
                                     name = "streams",
                                     type = List::class.asTypeName().parameterizedBy(
-                                        Flow::class.asTypeName().parameterizedBy(JsonElement::class.asTypeName())
+                                        Flow::class.asTypeName().parameterizedBy(hubValue)
                                     ),
                                 )
                                     .defaultValue("%M()", MemberName("kotlin.collections", "emptyList"))
@@ -111,12 +110,12 @@ open class HubCommunicationTask : DefaultTask() {
                             .addTypeVariable(genericTypeVariableT)
                             .addParameter("method", String::class)
                             .addParameter("itemSerializer", genericTypeVariableT.inKSerializer)
-                            .addParameter(name = "args", type = List::class.asTypeName().parameterizedBy(JsonElement::class.asTypeName()))
+                            .addParameter(name = "args", type = List::class.asTypeName().parameterizedBy(hubValue))
                             .addParameter(
                                 parameterSpec = ParameterSpec.builder(
                                     name = "streams",
                                     type = List::class.asTypeName().parameterizedBy(
-                                        Flow::class.asTypeName().parameterizedBy(JsonElement::class.asTypeName())
+                                        Flow::class.asTypeName().parameterizedBy(hubValue)
                                     ),
                                 )
                                     .defaultValue("%M()", MemberName("kotlin.collections", "emptyList"))
@@ -180,7 +179,7 @@ open class HubCommunicationTask : DefaultTask() {
     private fun TypeSpec.Builder.addMapMethods(): TypeSpec.Builder {
         val streamType = 'F'.typeVariable(0, bounded = true)
         return this.addFunction(
-            FunSpec.builder("mapJsonStream")
+            FunSpec.builder("mapHubValueStream")
                 .addModifiers(listOf(KModifier.PRIVATE))
                 .addTypeVariable(streamType)
                 .receiver(Flow::class.asTypeName().parameterizedBy(streamType))
@@ -190,8 +189,8 @@ open class HubCommunicationTask : DefaultTask() {
                         type = streamType.inKSerializer,
                     ).build()
                 )
-                .returns(Flow::class.asTypeName().parameterizedBy(JsonElement::class.asTypeName()))
-                .addCode("return %M { it.toJson(streamSerializer) }", MemberName("kotlinx.coroutines.flow", "map"))
+                .returns(Flow::class.asTypeName().parameterizedBy(hubValue))
+                .addCode("return %M { it.toHubValue(streamSerializer) }", MemberName("kotlinx.coroutines.flow", "map"))
                 .build()
         )
     }
@@ -456,13 +455,13 @@ open class HubCommunicationTask : DefaultTask() {
                         if (hasReifiedTypes)
                             appendLine(argumentTypes.passingInReifiedArguments("arg", indent = " ".repeat(4)))
                         else
-                            appendLine(argumentTypes.passingInTypedArguments("arg", indent = " ".repeat(4)) { arg, type -> "$arg.toJson($type)" })
+                            appendLine(argumentTypes.passingInTypedArguments("arg", indent = " ".repeat(4)) { arg, type -> "$arg.toHubValue($type)" })
 
                         if (hasReifiedTypes) {
                             if (streamTypes.isNotEmpty())
                                 appendLine(streamTypes.passingInReifiedArguments("stream", indent = " ".repeat(4)))
                         } else {
-                            appendLine(streamTypes.passingInTypedArguments("stream", indent = " ".repeat(4)) { arg, type -> "$arg.mapJsonStream($type)" })
+                            appendLine(streamTypes.passingInTypedArguments("stream", indent = " ".repeat(4)) { arg, type -> "$arg.mapHubValueStream($type)" })
                         }
 
                         append(")")
@@ -538,13 +537,13 @@ open class HubCommunicationTask : DefaultTask() {
                         if (hasReifiedTypes)
                             appendLine(argumentTypes.passingInReifiedArguments("arg", indent = " ".repeat(4)))
                         else
-                            appendLine(argumentTypes.passingInTypedArguments("arg", indent = " ".repeat(4)) { arg, type -> "$arg.toJson($type)" })
+                            appendLine(argumentTypes.passingInTypedArguments("arg", indent = " ".repeat(4)) { arg, type -> "$arg.toHubValue($type)" })
 
                         if (hasReifiedTypes) {
                             if (streamTypes.isNotEmpty())
                                 appendLine(streamTypes.passingInReifiedArguments("stream", indent = " ".repeat(4)))
                         } else {
-                            appendLine(streamTypes.passingInTypedArguments("stream", indent = " ".repeat(4)) { arg, type -> "$arg.mapJsonStream($type)" })
+                            appendLine(streamTypes.passingInTypedArguments("stream", indent = " ".repeat(4)) { arg, type -> "$arg.mapHubValueStream($type)" })
                         }
 
                         append(")")
@@ -613,7 +612,7 @@ open class HubCommunicationTask : DefaultTask() {
         indent: String = "",
     ): String = buildString {
         this@passingInTypedParameters.indices.forEach { index ->
-            appendLine("it.arguments[$index].fromJson(${name}${index + 1}),")
+            appendLine("it.arguments[$index].fromHubValue(${name}${index + 1}),")
         }
     }.trim().prependIndent(indent)
 
@@ -678,6 +677,8 @@ open class HubCommunicationTask : DefaultTask() {
         val typeVariable = TypeVariableName(name = "${this}${index}", bounds = if (bounded) listOf(Any::class) else emptyList())
         return if (reified) typeVariable.copy(reified = true) else typeVariable
     }
+
+    private val hubValue = ClassName("eu.lepicekmichal.signalrkore", "HubValue")
 
     private val TypeName.inKSerializer
         get() = KSerializer::class.asTypeName().parameterizedBy(this)

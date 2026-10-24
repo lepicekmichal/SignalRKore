@@ -1,8 +1,6 @@
 package eu.lepicekmichal.signalrkore.transports
 
 import eu.lepicekmichal.signalrkore.HttpRequestException
-import eu.lepicekmichal.signalrkore.HubMessage
-import eu.lepicekmichal.signalrkore.RECORD_SEPARATOR
 import eu.lepicekmichal.signalrkore.Transport
 import eu.lepicekmichal.signalrkore.utils.headers
 import io.ktor.client.HttpClient
@@ -17,12 +15,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import okio.EOFException
 
 internal class ServerSentEventsTransport(
     private val headers: Map<String, String>,
@@ -60,14 +54,8 @@ internal class ServerSentEventsTransport(
         }
     }
 
-    override fun receive(): Flow<ByteArray> = session?.let {
-        incoming
-            .receiveAsFlow()
-            .catch {
-                if (it is EOFException) emit((Json.encodeToString(HubMessage.Close()) + RECORD_SEPARATOR).toByteArray())
-                else throw it
-            }
-    } ?: throw IllegalStateException("SSE connection has not been started")
+    override fun receive(): Flow<ByteArray> = session?.let { incoming.receiveAsFlow() }
+        ?: throw IllegalStateException("SSE connection has not been started")
 
     override suspend fun send(message: ByteArray) {
         session ?: throw IllegalStateException("Cannot send unless the transport is active")

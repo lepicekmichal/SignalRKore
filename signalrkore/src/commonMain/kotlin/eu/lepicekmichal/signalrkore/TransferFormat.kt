@@ -1,6 +1,9 @@
 package eu.lepicekmichal.signalrkore
 
-internal enum class TransferFormat {
+/**
+ * The format of the data a [HubProtocol] sends over a transport.
+ */
+enum class TransferFormat {
     Text,
     Binary;
 }

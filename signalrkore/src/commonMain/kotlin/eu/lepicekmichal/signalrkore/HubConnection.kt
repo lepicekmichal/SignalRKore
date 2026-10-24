@@ -46,6 +46,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import okio.EOFException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
@@ -93,8 +94,7 @@ class HubConnection private constructor(
     private val serverTimeout: Duration,
     private val keepAliveInterval: Duration,
     override val logger: Logger,
-    json: Json,
-) : HubCommunicationLink(json) {
+) : HubCommunicationLink() {
 
     private val job = SupervisorJob()
     override val scope = CoroutineScope(job + Dispatchers.IO)
@@ -160,7 +160,6 @@ class HubConnection private constructor(
         accessTokenProvider = accessTokenProvider,
         skipNegotiate = skipNegotiate,
         automaticReconnect = automaticReconnect,
-        json = json,
         serverTimeout = serverTimeout,
         keepAliveInterval = keepAliveInterval,
         logger = logger,
@@ -245,7 +244,10 @@ class HubConnection private constructor(
                 .onStart { handshakeRemaining?.let { emit(it) } }
                 .onEach { processReceived(it) }
                 .onCompletion { if (it == null) handleConnectionLost(cause = null, message = "Server closed the connection") }
-                .catch { handleConnectionLost(it) }
+                .catch {
+                    if (it is EOFException) close(cause = null, message = "Server closed the connection")
+                    else handleConnectionLost(it)
+                }
                 .collect()
         }
     }
