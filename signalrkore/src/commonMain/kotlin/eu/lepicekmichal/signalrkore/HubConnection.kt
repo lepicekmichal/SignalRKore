@@ -17,13 +17,16 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.appendIfNameAbsent
 import io.ktor.utils.io.core.String
 import io.ktor.utils.io.core.toByteArray
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +36,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -179,8 +183,7 @@ class HubConnection private constructor(
                 startNegotiate(url = baseUrl, headers = headersWithAccessToken, negotiateAttempts = 0)
             } catch (ex: Exception) {
                 if (!reconnectionAttempt) {
-                    if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(ex.message)
-                    else stop(ex.message)
+                    handleConnectionFailure(ex.message)
                     return
                 } else {
                     throw ex
@@ -190,7 +193,7 @@ class HubConnection private constructor(
             Negotiation(transport = TransportEnum.WebSockets, url = baseUrl, headers = headersWithAccessToken)
         }
 
-        transport?.stop()
+        stopTransport()
 
         val transport = when (negotiation.transport) {
             TransportEnum.LongPolling -> LongPollingTransport(negotiation.headers, httpClient)
@@ -204,8 +207,7 @@ class HubConnection private constructor(
             transport.start(negotiation.url)
         } catch (ex: Exception) {
             if (!reconnectionAttempt) {
-                if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(ex.message)
-                else stop(ex.message)
+                handleConnectionFailure(ex.message)
                 return
             } else {
                 throw ex
@@ -229,8 +231,7 @@ class HubConnection private constructor(
             handleHandshake(transport)
         } catch (ex: Exception) {
             if (!reconnectionAttempt) {
-                if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(ex.message)
-                else stop(ex.message)
+                handleConnectionFailure(ex.message)
                 return
             } else {
                 throw ex
@@ -242,18 +243,13 @@ class HubConnection private constructor(
         if (negotiation.transport != TransportEnum.LongPolling) {
             scope.launch {
                 pingTicker
-                    .catch {
-                        if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(it.message)
-                        else stop(it.message)
-                    }
-                    .collect { sendHubMessage(message = HubMessage.Ping()) }
+                    .onEach { sendHubMessage(message = HubMessage.Ping()) }
+                    .catch { handleConnectionFailure(it.message) }
+                    .collect()
             }
             scope.launch {
                 serverTimeoutTicker
-                    .catch {
-                        if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(it.message)
-                        else stop(it.message)
-                    }
+                    .catch { handleConnectionFailure(it.message) }
                     .collect()
             }
         }
@@ -263,12 +259,15 @@ class HubConnection private constructor(
         scope.launch {
             transport.receive()
                 .onStart { handshakeRemaining?.let { emit(it) } }
-                .catch {
-                    if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(it.message)
-                    else stop(it.message)
-                }
-                .collect { processReceived(it) }
+                .onEach { processReceived(it) }
+                .catch { handleConnectionFailure(it.message) }
+                .collect()
         }
+    }
+
+    private suspend fun handleConnectionFailure(errorMessage: String?) {
+        if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(errorMessage)
+        else stop(errorMessage)
     }
 
     private suspend fun startNegotiate(
@@ -383,10 +382,15 @@ class HubConnection private constructor(
             var retryCount = 0
 
             while (true) {
-                val delayTime = automaticReconnect.invoke(
-                    previousRetryCount = retryCount++,
-                    elapsedTime = mark.elapsedNow(),
-                )
+                val delayTime = try {
+                    automaticReconnect.invoke(
+                        previousRetryCount = retryCount++,
+                        elapsedTime = mark.elapsedNow(),
+                    )
+                } catch (ex: Exception) {
+                    logger.log(Logger.Severity.ERROR, { "[$baseUrl] Automatic reconnect policy has thrown an exception" }, ex)
+                    null
+                }
 
                 delay(timeMillis = delayTime ?: break)
 
@@ -419,8 +423,20 @@ class HubConnection private constructor(
 
         logger.log(Logger.Severity.INFO, { "[$baseUrl] ${errorMessage ?: "Stopping connection"}" }, null)
 
-        transport?.stop()
-        job.cancelChildren()
+        try {
+            stopTransport()
+        } finally {
+            job.cancelChildren()
+        }
+    }
+
+    private suspend fun stopTransport() {
+        try {
+            transport?.stop()
+        } catch (ex: Exception) {
+            if (ex is CancellationException) currentCoroutineContext().ensureActive()
+            logger.log(Logger.Severity.WARNING, { "[$baseUrl] Failed to stop transport" }, ex)
+        }
     }
 
     override fun sendHubMessage(message: HubMessage) {
@@ -441,8 +457,7 @@ class HubConnection private constructor(
             } catch (e: Exception) {
                 logger.log(Logger.Severity.ERROR, { "Failed to send hub data: $message" }, e)
                 if (e is IOException) {
-                    if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(e.message)
-                    else stop(e.message)
+                    handleConnectionFailure(e.message)
                 }
             }
         }

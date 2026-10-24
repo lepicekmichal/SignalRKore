@@ -76,6 +76,13 @@ kotlin {
                 implementation(libs.ktor.okhttp)
             }
         }
+        val jvmTest by getting {
+            dependencies {
+                implementation(libs.kotlinx.coroutines.test)
+                implementation(libs.ktor.server.cio)
+                implementation(libs.ktor.server.websockets)
+            }
+        }
         val androidMain by getting {
             dependsOn(jvmMain)
         }

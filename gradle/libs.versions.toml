@@ -23,6 +23,8 @@ ktor-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktorClie
 ktor-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktorClientCore" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktorClientCore" }
 ktor-websockets = { module = "io.ktor:ktor-client-websockets", version.ref = "ktorClientCore" }
+ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktorClientCore" }
+ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktorClientCore" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 

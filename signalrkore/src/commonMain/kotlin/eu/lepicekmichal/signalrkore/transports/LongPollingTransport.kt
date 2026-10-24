@@ -4,6 +4,7 @@ import eu.lepicekmichal.signalrkore.Transport
 import eu.lepicekmichal.signalrkore.utils.headers
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
@@ -11,15 +12,15 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentLength
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlin.concurrent.Volatile
 import kotlin.time.Clock
@@ -29,7 +30,7 @@ internal class LongPollingTransport(private val headers: Map<String, String>, pr
     private val job = SupervisorJob()
     private val scope = CoroutineScope(job + Dispatchers.IO)
 
-    private val incoming: MutableSharedFlow<ByteArray> = MutableSharedFlow()
+    private val incoming: Channel<ByteArray> = Channel(Channel.UNLIMITED)
 
     @Volatile
     private var active = false
@@ -59,39 +60,38 @@ internal class LongPollingTransport(private val headers: Map<String, String>, pr
 
     private fun polling() {
         scope.launch {
-            while (true) {
-                if (!isActive) break
-                if (!active) {
-                    //log("Long Polling transport polling complete.");
-                    stop()
-                    break
-                }
-
-                val response = client.get(pollUrl) {
-                    headers(this@LongPollingTransport.headers)
-                    timeout {
-                        socketTimeoutMillis = Long.MAX_VALUE
-                        requestTimeoutMillis = POLL_TIMEOUT
-                    }
-                }
-
-                when (response.status) {
-                    HttpStatusCode.NoContent -> {
-                        //log("LongPolling transport terminated by server.")
-                        active = false
-                    }
-                    HttpStatusCode.OK -> {
-                        if (response.contentLength() != 0L) {
-                            incoming.emit(response.body())
-                        } else {
-                            //log("Poll timed out, reissuing.")
+            try {
+                while (active) {
+                    val response = try {
+                        client.get(pollUrl) {
+                            headers(this@LongPollingTransport.headers)
+                            timeout {
+                                socketTimeoutMillis = Long.MAX_VALUE
+                                requestTimeoutMillis = POLL_TIMEOUT
+                            }
                         }
+                    } catch (ex: HttpRequestTimeoutException) {
+                        continue
                     }
-                    else -> {
-                        //log("Unexpected response code ${response.status.value}")
-                        active = false
+
+                    when (response.status) {
+                        HttpStatusCode.NoContent -> throw RuntimeException("LongPolling transport terminated by server.")
+                        HttpStatusCode.OK -> {
+                            if (response.contentLength() != 0L) {
+                                incoming.send(response.body())
+                            } else {
+                                //log("Poll timed out, reissuing.")
+                            }
+                        }
+                        else -> throw RuntimeException("Unexpected response code ${response.status.value} while polling.")
                     }
                 }
+                incoming.close()
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (ex: Exception) {
+                active = false
+                incoming.close(ex)
             }
         }
     }
@@ -105,7 +105,7 @@ internal class LongPollingTransport(private val headers: Map<String, String>, pr
         }
     }
 
-    override fun receive(): Flow<ByteArray> = incoming.asSharedFlow()
+    override fun receive(): Flow<ByteArray> = incoming.receiveAsFlow()
 
     override suspend fun stop() {
         if (stopping) return
@@ -121,6 +121,7 @@ internal class LongPollingTransport(private val headers: Map<String, String>, pr
 
     private fun dispose() {
         scope.cancel()
+        incoming.close()
     }
 
     companion object {

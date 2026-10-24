@@ -244,7 +244,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
 
                 is HubMessage.Invocation.Blocking -> {
                     val result = try {
-                        callback(message)
+                        callback(message).toJson(resultSerializer)
                     } catch (ex: Exception) {
                         logger.log(
                             severity = Logger.Severity.ERROR,
@@ -263,7 +263,7 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
                     complete(
                         HubMessage.Completion.Resulted(
                             invocationId = message.invocationId,
-                            result = result.toJson(resultSerializer),
+                            result = result,
                         )
                     )
                 }
