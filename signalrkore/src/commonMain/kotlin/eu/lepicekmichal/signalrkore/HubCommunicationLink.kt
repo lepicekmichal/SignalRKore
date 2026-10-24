@@ -159,17 +159,17 @@ abstract class HubCommunicationLink(private val json: Json) : HubCommunication()
     ): Flow<T> {
         connectedCheck("stream")
 
-        val invocationId = UUID.randomUUID()
-
-        val streamIds = streams.map { UUID.randomUUID() }
-        val invocationMessage = HubMessage.StreamInvocation(
-            target = method,
-            arguments = args,
-            invocationId = invocationId,
-            streamIds = streamIds.takeIf { it.isNotEmpty() },
-        )
-
         return flow {
+            val invocationId = UUID.randomUUID()
+
+            val streamIds = streams.map { UUID.randomUUID() }
+            val invocationMessage = HubMessage.StreamInvocation(
+                target = method,
+                arguments = args,
+                invocationId = invocationId,
+                streamIds = streamIds.takeIf { it.isNotEmpty() },
+            )
+
             val messages = registerInvocation(invocationId)
             var awaitingCompletion = false
             try {

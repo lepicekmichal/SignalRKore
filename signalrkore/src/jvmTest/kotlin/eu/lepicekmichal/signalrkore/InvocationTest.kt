@@ -391,7 +391,6 @@ class InvocationTest : HubTest() {
         assertEquals(listOf(1), items)
     }
 
-    @Ignore
     @Test
     fun `stream collected twice invokes the server twice`() = runBlocking<Unit> {
         val connection = connection(startRecordingHub { message ->
