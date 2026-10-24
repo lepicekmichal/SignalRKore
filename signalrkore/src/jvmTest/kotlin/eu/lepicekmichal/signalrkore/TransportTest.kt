@@ -22,6 +22,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonPrimitive
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Ignore
 import kotlin.test.Test
@@ -96,6 +97,18 @@ class TransportTest : HubTest() {
         answering.cancel()
         handler.cancel()
         assertEquals(1, hub.deletes.get())
+    }
+
+    @Test
+    fun `long polling sends messages in order`() = runBlocking<Unit> {
+        val hub = HttpHub()
+        val connection = connection(startHttpHub("LongPolling", hub))
+
+        connection.start()
+        repeat(50) { connection.send("Number", it) }
+
+        assertEquals(List(50) { it }, List(50) { withTimeout(5.seconds) { hub.receiveMessage() }.arguments.single().jsonPrimitive.content.toInt() })
+        connection.stop()
     }
 
     @Test

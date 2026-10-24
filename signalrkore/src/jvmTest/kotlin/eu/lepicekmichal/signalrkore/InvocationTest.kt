@@ -18,7 +18,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -74,6 +73,16 @@ class InvocationTest : HubTest() {
             Json.parseToJsonElement("""{"type":1,"target":"Person","arguments":[{"firstName":"John","lastName":"Doe","age":30}]}"""),
             nextMessage(),
         )
+        connection.stop()
+    }
+
+    @Test
+    fun `messages are sent in order`() = runBlocking<Unit> {
+        val connection = connection(startRecordingHub()).apply { start() }
+
+        repeat(200) { connection.send("Number", it) }
+
+        assertEquals(List(200) { it }, List(200) { nextMessage().arguments.single().jsonPrimitive.content.toInt() })
         connection.stop()
     }
 
@@ -405,7 +414,6 @@ class InvocationTest : HubTest() {
         connection.stop()
     }
 
-    @Ignore
     @Test
     fun `upload stream through send`() = runBlocking<Unit> {
         val connection = connection(startRecordingHub()).apply { start() }
@@ -445,7 +453,6 @@ class InvocationTest : HubTest() {
 
     private var invocationIdOfUpload = ""
 
-    @Ignore
     @Test
     fun `upload stream through stream`() = runBlocking<Unit> {
         val connection = connection(startRecordingHub { message ->
@@ -480,7 +487,6 @@ class InvocationTest : HubTest() {
         connection.stop()
     }
 
-    @Ignore
     @Test
     fun `failing upload stream sends completion with error`() = runBlocking<Unit> {
         val connection = connection(startRecordingHub()).apply { start() }

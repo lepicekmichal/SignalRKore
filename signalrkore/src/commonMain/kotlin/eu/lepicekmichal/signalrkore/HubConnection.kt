@@ -24,6 +24,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -127,6 +128,8 @@ class HubConnection private constructor(
 
     private var transport: Transport? = null
 
+    private var outgoing: Channel<Pair<HubMessage, ByteArray>>? = null
+
     internal constructor(
         url: String,
         skipNegotiate: Boolean,
@@ -211,6 +214,23 @@ class HubConnection private constructor(
         transport.send(handshake.toByteArray())
 
         val handshakeRemaining = handleHandshake(transport)
+
+        val outgoing = Channel<Pair<HubMessage, ByteArray>>(Channel.UNLIMITED)
+        this.outgoing = outgoing
+        scope.launch {
+            for ((message, payload) in outgoing) {
+                try {
+                    transport.send(payload)
+                    logger.log(Logger.Severity.INFO, { "Sent hub data: $message" }, null)
+                    resetKeepAlive()
+                } catch (e: Exception) {
+                    e.rethrowIfCancelled()
+                    logger.log(Logger.Severity.ERROR, { "Failed to send hub data: $message" }, e)
+                    handleConnectionLost(e)
+                    return@launch
+                }
+            }
+        }
 
         _connectionState.value = HubConnectionState.CONNECTED
 
@@ -448,20 +468,7 @@ class HubConnection private constructor(
         }
 
         val serializedMessage: ByteArray = protocol.writeMessage(message)
-        scope.launch {
-            try {
-                transport?.let {
-                    it.send(serializedMessage)
-                    logger.log(Logger.Severity.INFO, { "Sent hub data: $message" }, null)
-                }
-
-                resetKeepAlive()
-            } catch (e: Exception) {
-                e.rethrowIfCancelled()
-                logger.log(Logger.Severity.ERROR, { "Failed to send hub data: $message" }, e)
-                handleConnectionLost(e)
-            }
-        }
+        outgoing?.trySend(message to serializedMessage)
     }
 
     private suspend fun processReceived(payload: ByteArray) {

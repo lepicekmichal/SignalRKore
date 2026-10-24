@@ -83,7 +83,7 @@ abstract class HubTest {
     }
 
     protected fun serve(module: Application.() -> Unit): Int {
-        val server = embeddedServer(CIO, port = 0, module = module).start(wait = false)
+        val server = embeddedServer(CIO, port = 0, host = "127.0.0.1", module = module).start(wait = false)
         this.server = server
         return runBlocking { server.engine.resolvedConnectors().first().port }
     }
@@ -174,7 +174,7 @@ abstract class HubTest {
     }
 
     protected fun connection(port: Int, path: String = "/hub", block: HttpHubConnectionBuilder.() -> Unit = {}) =
-        HubConnectionBuilder.create("http://localhost:$port$path") {
+        HubConnectionBuilder.create("http://127.0.0.1:$port$path") {
             logger = Logger { severity, message, cause -> logs += Log(severity, message(), cause) }
             block()
         }
