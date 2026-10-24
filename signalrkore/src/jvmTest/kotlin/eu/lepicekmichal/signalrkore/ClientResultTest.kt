@@ -91,6 +91,18 @@ class ClientResultTest : HubTest() {
     }
 
     @Test
+    fun `stream invocation from server is answered with an error`() = runBlocking<Unit> {
+        val connection = connection(startHubSending("""{"type":4,"invocationId":"1","target":"Count","arguments":[10]}"""))
+
+        connection.start()
+
+        assertEquals(Json.parseToJsonElement("""{"type":3,"invocationId":"1","error":"Client does not support streaming invocations."}"""), nextMessage())
+        awaitLog { it.severity == Logger.Severity.WARNING && it.message.contains("Count") }
+        assertEquals(HubConnectionState.CONNECTED, connection.connectionState.value)
+        connection.stop()
+    }
+
+    @Test
     fun `only one result handler per method`() = runBlocking<Unit> {
         val connection = connection(port = 1)
         connection.on("Answer", Int.serializer()) { 42 }

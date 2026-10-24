@@ -497,7 +497,10 @@ class HubConnection private constructor(
                 }
 
                 is HubMessage.Invocation -> processReceivedInvocation(message)
-                is HubMessage.StreamInvocation -> Unit // not supported yet
+                is HubMessage.StreamInvocation -> {
+                    logger.log(Logger.Severity.WARNING, { "Server invoked streaming method '${message.target}', which is not supported" }, null)
+                    sendHubMessage(HubMessage.Completion.Error(invocationId = message.invocationId, error = "Client does not support streaming invocations."))
+                }
                 is HubMessage.Ping -> Unit
                 is HubMessage.CancelInvocation -> Unit // this should not happen according to standard
                 is HubMessage.StreamItem -> processReceivedStreamItem(message)
