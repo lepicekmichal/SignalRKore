@@ -68,6 +68,7 @@ kotlin {
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
         val jvmMain by getting {
@@ -78,7 +79,6 @@ kotlin {
         }
         val jvmTest by getting {
             dependencies {
-                implementation(libs.kotlinx.coroutines.test)
                 implementation(libs.ktor.server.cio)
                 implementation(libs.ktor.server.websockets)
             }
@@ -128,6 +128,10 @@ mavenPublishing {
 
 tasks.register<HubCommunicationTask>("HubCommunicationGeneration") {
     this.group = "build"
+}
+
+tasks.withType<Test>().configureEach {
+    systemProperty("kotlinx.coroutines.stacktrace.recovery", "false")
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
