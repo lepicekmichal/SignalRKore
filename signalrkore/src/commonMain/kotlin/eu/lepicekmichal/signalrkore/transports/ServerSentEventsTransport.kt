@@ -13,10 +13,13 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.HttpStatusCode
 import io.ktor.utils.io.core.toByteArray
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import okio.EOFException
@@ -28,27 +31,43 @@ internal class ServerSentEventsTransport(
 
     private var session: ClientSSESession? = null
 
+    private val incoming: Channel<ByteArray> = Channel(Channel.UNLIMITED)
+
     private lateinit var url: String
 
     override suspend fun start(url: String) {
         this.url = url
 
-        session = client.sseSession(url) {
+        val session = client.sseSession(url) {
             headers(this@ServerSentEventsTransport.headers)
 
             timeout {
                 socketTimeoutMillis = Long.MAX_VALUE
             }
         }
+        this.session = session
+
+        session.launch {
+            try {
+                session.incoming.collect { event -> event.data?.let { incoming.send(it.toByteArray()) } }
+                incoming.close()
+            } catch (ex: CancellationException) {
+                incoming.close()
+                throw ex
+            } catch (ex: Exception) {
+                incoming.close(ex)
+            }
+        }
     }
 
-    override fun receive(): Flow<ByteArray> = session?.incoming
-        ?.mapNotNull { it.data?.toByteArray() }
-        ?.catch {
-            if (it is EOFException) emit((Json.encodeToString(HubMessage.Close()) + RECORD_SEPARATOR).toByteArray())
-            else throw it
-        }
-        ?: throw IllegalStateException("SSE connection has not been started")
+    override fun receive(): Flow<ByteArray> = session?.let {
+        incoming
+            .receiveAsFlow()
+            .catch {
+                if (it is EOFException) emit((Json.encodeToString(HubMessage.Close()) + RECORD_SEPARATOR).toByteArray())
+                else throw it
+            }
+    } ?: throw IllegalStateException("SSE connection has not been started")
 
     override suspend fun send(message: ByteArray) {
         session ?: throw IllegalStateException("Cannot send unless the transport is active")

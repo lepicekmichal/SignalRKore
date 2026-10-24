@@ -24,7 +24,6 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -201,7 +200,6 @@ class TransportTest : HubTest() {
         connection.awaitState(HubConnectionState.DISCONNECTED)
     }
 
-    @Ignore
     @Test
     fun `server sent events round trip`() = runBlocking<Unit> {
         val hub = HttpHub()
@@ -216,7 +214,6 @@ class TransportTest : HubTest() {
         answering.cancel()
     }
 
-    @Ignore
     @Test
     fun `server sent events work with the default http client`() = runBlocking<Unit> {
         val connection = connection(startHttpHub("ServerSentEvents"))
@@ -227,7 +224,6 @@ class TransportTest : HubTest() {
         connection.stop()
     }
 
-    @Ignore
     @Test
     fun `server sent events send rejected by server closes the connection`() = runBlocking<Unit> {
         val hub = HttpHub()
