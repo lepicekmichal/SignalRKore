@@ -18,6 +18,7 @@ rootProject.name = "SignalRKore"
 include(
 //    ":androidApp",
     ":signalrkore",
+    ":signalrkore-msgpack",
 )
 
 //enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
