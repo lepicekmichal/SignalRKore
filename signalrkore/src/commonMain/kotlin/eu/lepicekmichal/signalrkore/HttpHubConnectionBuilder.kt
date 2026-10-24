@@ -9,9 +9,10 @@ import kotlin.time.Duration.Companion.seconds
 class HttpHubConnectionBuilder(private val url: String) {
 
     /**
-     * The transport type to be used by the [eu.lepicekmichal.signalrkore.HubConnection]
+     * The transports the [eu.lepicekmichal.signalrkore.HubConnection] may use. They are tried in the order the server offers them,
+     * falling back to the next one when a transport fails to start.
      */
-    var transportEnum: TransportEnum = TransportEnum.All
+    var transports: Set<TransportEnum> = TransportEnum.entries.toSet()
 
     /**
      * The [HttpClient] to be used by the [eu.lepicekmichal.signalrkore.HubConnection]
@@ -82,7 +83,7 @@ class HttpHubConnectionBuilder(private val url: String) {
         handshakeResponseTimeout = handshakeResponseTimeout,
         headers = headers,
         accessTokenProvider = accessTokenProvider,
-        transportEnum = transportEnum,
+        transports = transports,
         json = json,
         logger = logger,
         serverTimeout = serverTimeout,

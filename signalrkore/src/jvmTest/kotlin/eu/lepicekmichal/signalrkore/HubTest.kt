@@ -9,6 +9,7 @@ import io.ktor.server.application.install
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
+import io.ktor.server.request.header
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytesWriter
@@ -128,9 +129,13 @@ abstract class HubTest {
         transport: String,
         hub: HttpHub = HttpHub(),
         handshakeResponse: String? = "{}",
+        offered: List<String> = listOf(transport),
     ) = serve {
         routing {
-            negotiate(transport)
+            post("/hub/negotiate") {
+                hub.negotiations.incrementAndGet()
+                call.respondText(negotiateResponse(*offered.toTypedArray()), ContentType.Application.Json)
+            }
             post("/hub") {
                 hub.requests += call.request.headers.copy()
                 call.receiveText().split(RECORD_SEPARATOR).filter { it.isNotBlank() }.forEach {
@@ -150,6 +155,7 @@ abstract class HubTest {
             }
             if (transport == "LongPolling") {
                 get("/hub") {
+                    if (call.request.header("Upgrade") != null) return@get call.respond(HttpStatusCode.NotFound, "")
                     hub.requests += call.request.headers.copy()
                     if (hub.polls.getAndIncrement() == 0) return@get call.respond(HttpStatusCode.OK, "")
                     val payload = withTimeoutOrNull(2.seconds) { hub.toClient.receiveCatching() }
@@ -161,6 +167,7 @@ abstract class HubTest {
                 }
             } else {
                 get("/hub") {
+                    if (call.request.header("Upgrade") != null) return@get call.respond(HttpStatusCode.NotFound, "")
                     hub.requests += call.request.headers.copy()
                     call.respondBytesWriter(ContentType.Text.EventStream) {
                         for (payload in hub.toClient) {
@@ -211,6 +218,7 @@ abstract class HubTest {
 class HttpHub {
     val toClient = Channel<String>(Channel.UNLIMITED)
     val fromClient = Channel<JsonObject>(Channel.UNLIMITED)
+    val negotiations = AtomicInteger(0)
     val polls = AtomicInteger(0)
     val deletes = AtomicInteger(0)
     val requests: MutableList<Headers> = Collections.synchronizedList(mutableListOf())

@@ -70,11 +70,70 @@ class TransportTest : HubTest() {
     @Test
     fun `requested transport not offered by server fails start`() = runBlocking<Unit> {
         val port = serve { routing { negotiate("LongPolling") } }
-        val connection = connection(port) { transportEnum = TransportEnum.WebSockets }
+        val connection = connection(port) { transports = setOf(TransportEnum.WebSockets) }
 
         val ex = assertFailsWith<RuntimeException> { connection.start() }
 
         assertEquals("There were no compatible transports on the server.", ex.message)
+        assertEquals(HubConnectionState.DISCONNECTED, connection.connectionState.value)
+    }
+
+    @Test
+    fun `only allowed transports offered by server are used`() = runBlocking<Unit> {
+        val hub = HttpHub()
+        val connection = connection(startHttpHub("LongPolling", hub, offered = listOf("ServerSentEvents", "LongPolling"))) {
+            transports = setOf(TransportEnum.WebSockets, TransportEnum.LongPolling)
+        }
+
+        connection.start()
+
+        assertEquals(HubConnectionState.CONNECTED, connection.connectionState.value)
+        assertTrue(hub.polls.get() > 0)
+        assertEquals(1, hub.negotiations.get())
+        connection.stop()
+    }
+
+    @Test
+    fun `server order decides between allowed transports`() = runBlocking<Unit> {
+        val hub = HttpHub()
+        val connection = connection(startHttpHub("LongPolling", hub, offered = listOf("LongPolling", "WebSockets")))
+
+        connection.start()
+
+        assertTrue(hub.polls.get() > 0)
+        assertTrue(logs.none { it.message.contains("Failed to start the transport") }, logsText())
+        connection.stop()
+    }
+
+    @Test
+    fun `falls back to the next transport when one fails to start`() = runBlocking<Unit> {
+        val hub = HttpHub()
+        val connection = connection(startHttpHub("LongPolling", hub, offered = listOf("WebSockets", "LongPolling")))
+        val answering = launch { hub.answerInvocations() }
+
+        connection.start()
+
+        assertEquals("Echo", withTimeout(5.seconds) { connection.invoke("Echo", String.serializer()) })
+        assertEquals(2, hub.negotiations.get())
+        awaitLog { it.severity == Logger.Severity.WARNING && it.message.contains("Failed to start the transport WebSockets") }
+        connection.stop()
+        answering.cancel()
+    }
+
+    @Test
+    fun `all transports failing throws TransportsFailedException`() = runBlocking<Unit> {
+        val port = serve {
+            routing {
+                negotiate("WebSockets", "LongPolling")
+                get("/hub") { call.respond(HttpStatusCode.NotFound, "No Connection with that ID") }
+            }
+        }
+        val connection = connection(port)
+
+        val ex = assertFailsWith<TransportsFailedException> { connection.start() }
+
+        assertEquals(listOf(TransportEnum.WebSockets, TransportEnum.LongPolling), ex.failures.keys.toList())
+        assertEquals(404, (ex.failures.getValue(TransportEnum.LongPolling) as HttpRequestException).statusCode)
         assertEquals(HubConnectionState.DISCONNECTED, connection.connectionState.value)
     }
 
@@ -253,7 +312,7 @@ class TransportTest : HubTest() {
         listOf(TransportEnum.WebSockets, TransportEnum.ServerSentEvents, TransportEnum.LongPolling).forEach { transport ->
             listOf(AutomaticReconnect.Inactive, AutomaticReconnect.Custom { _, _ -> 10L }).forEach { reconnect ->
                 val connection = connection(port) {
-                    transportEnum = transport
+                    transports = setOf(transport)
                     automaticReconnect = reconnect
                     httpClient = sseClient
                 }

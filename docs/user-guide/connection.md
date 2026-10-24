@@ -82,28 +82,30 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 
 ### Transport
 
-You can specify which transport to use for the connection:
+You can limit which transports the connection may use:
 
 ```kotlin
-transportEnum = TransportEnum.WebSockets
+transports = setOf(TransportEnum.WebSockets, TransportEnum.LongPolling)
 ```
 
-Available transport options:
+Available transports:
 
-- `TransportEnum.All` (default): Automatically selects the best available transport
-- `TransportEnum.WebSockets`: Uses WebSockets transport
-- `TransportEnum.ServerSentEvents`: Uses Server-Sent Events transport
-- `TransportEnum.LongPolling`: Uses Long Polling transport
+- `TransportEnum.WebSockets`
+- `TransportEnum.ServerSentEvents`
+- `TransportEnum.LongPolling`
+
+By default, all of them are allowed. The allowed transports are tried in the order the server offers them, and if one fails to start, the next one is tried. If none of them can be started, `start` throws `TransportsFailedException` with the error of each transport that was tried.
 
 ### Skip Negotiate
 
 You can skip the negotiate step when using WebSockets:
 
 ```kotlin
+transports = setOf(TransportEnum.WebSockets)
 skipNegotiate = true
 ```
 
-Note: This option can only be used with WebSockets transport.
+Note: This option can only be used when WebSockets is the only allowed transport, and there is no transport fallback.
 
 ### Automatic Reconnect
 
@@ -214,7 +216,7 @@ val scope = CoroutineScope(Dispatchers.Main)
 
 // Create a connection
 val connection = HubConnectionBuilder.create("https://example.com/chathub") {
-    transportEnum = TransportEnum.WebSockets
+    transports = setOf(TransportEnum.WebSockets)
     automaticReconnect = AutomaticReconnect.Active
     headers = mapOf("Authorization" to "Bearer token")
 }

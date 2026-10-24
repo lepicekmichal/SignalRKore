@@ -16,18 +16,19 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 
 ### Transport Type
 
-You can specify which transport to use for the connection:
+You can limit which transports the connection may use:
 
 ```kotlin
-transportEnum = TransportEnum.WebSockets
+transports = setOf(TransportEnum.WebSockets, TransportEnum.LongPolling)
 ```
 
-Available transport options:
+Available transports:
 
-- `TransportEnum.All` (default): Automatically selects the best available transport
-- `TransportEnum.WebSockets`: Uses WebSockets transport
-- `TransportEnum.ServerSentEvents`: Uses Server-Sent Events transport
-- `TransportEnum.LongPolling`: Uses Long Polling transport
+- `TransportEnum.WebSockets`
+- `TransportEnum.ServerSentEvents`
+- `TransportEnum.LongPolling`
+
+By default, all of them are allowed. The allowed transports are tried in the order the server offers them, and if one fails to start, the next one is tried. If none of them can be started, `start` throws `TransportsFailedException` with the error of each transport that was tried.
 
 See the [Transport](../api/transport.md) API reference for more details.
 
@@ -36,10 +37,11 @@ See the [Transport](../api/transport.md) API reference for more details.
 You can skip the negotiate step when using WebSockets:
 
 ```kotlin
+transports = setOf(TransportEnum.WebSockets)
 skipNegotiate = true
 ```
 
-Note: This option can only be used with WebSockets transport.
+Note: This option can only be used when WebSockets is the only allowed transport, and there is no transport fallback.
 
 ## Authentication and Headers
 
@@ -257,7 +259,7 @@ Here's a complete example that demonstrates all configuration options:
 ```kotlin
 val connection = HubConnectionBuilder.create("https://example.com/chathub") {
     // Transport options
-    transportEnum = TransportEnum.WebSockets
+    transports = setOf(TransportEnum.WebSockets)
     skipNegotiate = true
 
     // Authentication and headers

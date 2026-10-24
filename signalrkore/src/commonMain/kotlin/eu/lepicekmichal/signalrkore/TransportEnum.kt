@@ -3,10 +3,9 @@
 package eu.lepicekmichal.signalrkore
 
 /**
- * Used to specify the transport the client will use.
+ * A transport the client can use to connect to the server.
  */
 enum class TransportEnum {
-    All,
     ServerSentEvents,
     LongPolling,
     WebSockets,

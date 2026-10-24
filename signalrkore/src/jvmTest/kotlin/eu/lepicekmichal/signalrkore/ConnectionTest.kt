@@ -264,7 +264,7 @@ class ConnectionTest : HubTest() {
         }
         val connection = connection(port) {
             skipNegotiate = true
-            transportEnum = TransportEnum.WebSockets
+            transports = setOf(TransportEnum.WebSockets)
         }
 
         connection.start()

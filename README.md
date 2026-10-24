@@ -23,7 +23,7 @@ SignalRKore is a Kotlin Multiplatform client library for ASP.NET Core SignalR. I
 | Async                      |                                            RxJava                                            |             Coroutines              |
 | Serialization              |                                   Gson (non-customizable)                                    | Kotlinx Serializable (customizable) |
 | Streams                    |                                      :heavy_check_mark:                                      |         :heavy_check_mark:          |
-| Transport fallback         |                                   :heavy_multiplication_x:                                   |      :heavy_multiplication_x:       |
+| Transport fallback         |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
 | Automatic reconnect        |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
 | SSE                        |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
 | Connection status          |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
@@ -76,6 +76,6 @@ SignalRKore is released under the [Apache 2.0 license](https://github.com/lepice
 - [x] Implement streams
 - [x] Extend to JVM
 - [x] Extend to iOS
-- [ ] Implement transport fallback
+- [x] Implement transport fallback
 - [x] Implement automatic reconnect
 - [ ] Reacting to stream invocation from server

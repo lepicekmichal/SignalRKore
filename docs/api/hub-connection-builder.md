@@ -16,7 +16,7 @@ You can configure the connection by passing a lambda to the `create` method:
 
 ```kotlin
 val connection = HubConnectionBuilder.create("https://example.com/chathub") {
-    transportEnum = TransportEnum.WebSockets
+    transports = setOf(TransportEnum.WebSockets)
     skipNegotiate = true
     automaticReconnect = AutomaticReconnect.Active
     handshakeResponseTimeout = 30.seconds
@@ -25,28 +25,30 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 
 ### Transport
 
-You can specify which transport to use for the connection:
+You can limit which transports the connection may use:
 
 ```kotlin
-transportEnum = TransportEnum.WebSockets
+transports = setOf(TransportEnum.WebSockets, TransportEnum.LongPolling)
 ```
 
-Available transport options:
+Available transports:
 
-- `TransportEnum.All` (default): Automatically selects the best available transport
-- `TransportEnum.WebSockets`: Uses WebSockets transport
-- `TransportEnum.ServerSentEvents`: Uses Server-Sent Events transport
-- `TransportEnum.LongPolling`: Uses Long Polling transport
+- `TransportEnum.WebSockets`
+- `TransportEnum.ServerSentEvents`
+- `TransportEnum.LongPolling`
+
+By default, all of them are allowed. The allowed transports are tried in the order the server offers them, and if one fails to start, the next one is tried. If none of them can be started, `start` throws `TransportsFailedException` with the error of each transport that was tried.
 
 ### Skip Negotiate
 
 You can skip the negotiate step when using WebSockets:
 
 ```kotlin
+transports = setOf(TransportEnum.WebSockets)
 skipNegotiate = true
 ```
 
-Note: This option can only be used with WebSockets transport.
+Note: This option can only be used when WebSockets is the only allowed transport, and there is no transport fallback.
 
 ### Automatic Reconnect
 
@@ -173,7 +175,7 @@ Here's a complete example that demonstrates all configuration options:
 
 ```kotlin
 val connection = HubConnectionBuilder.create("https://example.com/chathub") {
-    transportEnum = TransportEnum.WebSockets
+    transports = setOf(TransportEnum.WebSockets)
     skipNegotiate = true
     automaticReconnect = AutomaticReconnect.Active
     handshakeResponseTimeout = 30.seconds
@@ -214,7 +216,7 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 
 | Name                       | Type                    | Default | Description |
 |----------------------------|-------------------------|---------|-------------|
-| `transportEnum`            | `TransportEnum`         | `TransportEnum.All` | The transport type to use for the connection |
+| `transports`               | `Set<TransportEnum>`    | all transports | The transports the connection may use |
 | `skipNegotiate`            | `Boolean`               | `false` | Whether to skip the negotiate step (WebSockets only) |
 | `automaticReconnect`       | `AutomaticReconnect`    | `AutomaticReconnect.Inactive` | The automatic reconnect policy |
 | `handshakeResponseTimeout` | `Duration`              | `15.seconds` | The timeout for the handshake response |

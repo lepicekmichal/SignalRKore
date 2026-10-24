@@ -69,7 +69,7 @@ import kotlin.time.TimeSource
  * @property baseUrl The URL of the SignalR hub
  * @property protocol The protocol used for communication with the hub
  * @property httpClient The HTTP client used for communication
- * @property transportEnum The transport type to use for communication
+ * @property transports The transports allowed for communication
  * @property handshakeResponseTimeout The timeout for handshake response
  * @property headers HTTP headers to include in requests
  * @property accessTokenProvider Lazy access token to include in HTTP headers in requests
@@ -84,7 +84,7 @@ class HubConnection private constructor(
     private val baseUrl: String,
     private val protocol: HubProtocol,
     private val httpClient: HttpClient,
-    private val transportEnum: TransportEnum,
+    private val transports: Set<TransportEnum>,
     private val handshakeResponseTimeout: Duration,
     private val headers: Map<String, String>,
     private val accessTokenProvider: (suspend () -> String)?,
@@ -140,7 +140,7 @@ class HubConnection private constructor(
         handshakeResponseTimeout: Duration,
         headers: Map<String, String>,
         accessTokenProvider: (suspend () -> String)?,
-        transportEnum: TransportEnum,
+        transports: Set<TransportEnum>,
         json: Json,
         serverTimeout: Duration,
         keepAliveInterval: Duration,
@@ -154,7 +154,7 @@ class HubConnection private constructor(
             install(HttpTimeout)
             install(ContentNegotiation) { json(Json(json) { ignoreUnknownKeys = true }) }
         },
-        transportEnum = transportEnum,
+        transports = transports,
         handshakeResponseTimeout = if (handshakeResponseTimeout.isPositive()) handshakeResponseTimeout else 15.seconds,
         headers = headers,
         accessTokenProvider = accessTokenProvider,
@@ -183,30 +183,18 @@ class HubConnection private constructor(
             _connectionState.value = HubConnectionState.CONNECTING
         }
 
-        if (skipNegotiate && transportEnum != TransportEnum.WebSockets)
+        if (skipNegotiate && transports != setOf(TransportEnum.WebSockets))
             throw RuntimeException("Negotiation can only be skipped when using a WebSocket transport")
 
         val headersWithAccessToken = accessTokenProvider?.invoke()?.let { accessToken ->
             headers.toMutableMap().apply { this["Authorization"] = "Bearer $accessToken" }
         } ?: headers
 
-        val negotiation = if (!skipNegotiate) {
-            startNegotiate(url = baseUrl, headers = headersWithAccessToken, negotiateAttempts = 0)
+        val (transportType, transport) = if (!skipNegotiate) {
+            startAvailableTransport(headersWithAccessToken)
         } else {
-            Negotiation(transport = TransportEnum.WebSockets, url = baseUrl, headers = headersWithAccessToken)
+            TransportEnum.WebSockets to startTransport(TransportEnum.WebSockets, baseUrl, headersWithAccessToken)
         }
-
-        stopTransport()
-
-        val transport = when (negotiation.transport) {
-            TransportEnum.LongPolling -> LongPollingTransport(negotiation.headers, httpClient)
-            TransportEnum.ServerSentEvents -> ServerSentEventsTransport(negotiation.headers, httpClient)
-            else -> WebSocketTransport(negotiation.headers, httpClient)
-        }
-
-        this.transport = transport
-
-        transport.start(negotiation.url)
 
         if (connectionState.value != HubConnectionState.CONNECTING && connectionState.value != HubConnectionState.RECONNECTING) {
             throw RuntimeException("Connection closed while trying to connect.")
@@ -236,7 +224,7 @@ class HubConnection private constructor(
 
         _connectionState.value = HubConnectionState.CONNECTED
 
-        if (negotiation.transport != TransportEnum.LongPolling) {
+        if (transportType != TransportEnum.LongPolling) {
             scope.launch {
                 pingTicker
                     .onEach { sendHubMessage(message = HubMessage.Ping()) }
@@ -260,6 +248,44 @@ class HubConnection private constructor(
                 .catch { handleConnectionLost(it) }
                 .collect()
         }
+    }
+
+    private suspend fun startAvailableTransport(headers: Map<String, String>): Pair<TransportEnum, Transport> {
+        val initialNegotiation = startNegotiate(url = baseUrl, headers = headers, negotiateAttempts = 0)
+
+        val candidates = initialNegotiation.transports.filter { it in transports }
+        if (candidates.isEmpty()) throw RuntimeException("There were no compatible transports on the server.")
+
+        var negotiation: Negotiation? = initialNegotiation
+        val failures = mutableMapOf<TransportEnum, Throwable>()
+        for (candidate in candidates) {
+            val current = negotiation ?: startNegotiate(url = baseUrl, headers = headers, negotiateAttempts = 0)
+            try {
+                return candidate to startTransport(candidate, current.url, current.headers)
+            } catch (ex: Exception) {
+                ex.rethrowIfCancelled()
+                logger.log(Logger.Severity.WARNING, { "[$baseUrl] Failed to start the transport $candidate" }, ex)
+                failures[candidate] = ex
+                negotiation = null
+            }
+        }
+
+        throw failures.values.singleOrNull() ?: TransportsFailedException(failures)
+    }
+
+    private suspend fun startTransport(type: TransportEnum, url: String, headers: Map<String, String>): Transport {
+        stopTransport()
+
+        val transport = when (type) {
+            TransportEnum.LongPolling -> LongPollingTransport(headers, httpClient)
+            TransportEnum.ServerSentEvents -> ServerSentEventsTransport(headers, httpClient)
+            TransportEnum.WebSockets -> WebSocketTransport(headers, httpClient)
+        }
+
+        this.transport = transport
+
+        transport.start(url)
+        return transport
     }
 
     private suspend fun handleConnectionLost(cause: Throwable?, message: String? = null) {
@@ -299,21 +325,6 @@ class HubConnection private constructor(
             }
 
             is NegotiateResponse.Success -> {
-                fun NegotiateResponse.Success.selectTransport(vararg accessibleTransports: TransportEnum): TransportEnum? {
-                    val candidates = accessibleTransports.intersect(availableTransports.transports.toSet())
-                    return candidates.firstOrNull()
-                }
-
-                val chosenTransport = when (transportEnum) {
-                    TransportEnum.All -> response.selectTransport(
-                        TransportEnum.WebSockets,
-                        TransportEnum.ServerSentEvents,
-                        TransportEnum.LongPolling
-                    )
-
-                    else -> response.selectTransport(transportEnum)
-                } ?: throw RuntimeException("There were no compatible transports on the server.")
-
                 val connectionToken = if (response.negotiateVersion > 0) {
                     response.connectionToken ?: throw RuntimeException("Negotiate response is missing the connection token.")
                 } else {
@@ -323,7 +334,7 @@ class HubConnection private constructor(
                 val finalUrl: String = URLBuilder(url).apply { parameters.append("id", connectionToken) }.buildString()
 
                 return Negotiation(
-                    transport = chosenTransport,
+                    transports = response.availableTransports.transports,
                     url = finalUrl,
                     headers = headers,
                 )

@@ -23,7 +23,7 @@ WebSockets is a protocol providing full-duplex communication channels over a sin
 
 ```kotlin
 val connection = HubConnectionBuilder.create("https://example.com/chathub") {
-    transportEnum = TransportEnum.WebSockets
+    transports = setOf(TransportEnum.WebSockets)
 }
 ```
 
@@ -33,7 +33,7 @@ Server-Sent Events is a technology where a browser receives automatic updates fr
 
 ```kotlin
 val connection = HubConnectionBuilder.create("https://example.com/chathub") {
-    transportEnum = TransportEnum.ServerSentEvents
+    transports = setOf(TransportEnum.ServerSentEvents)
 }
 ```
 
@@ -43,27 +43,21 @@ Long Polling is a technique where the client makes an HTTP request to the server
 
 ```kotlin
 val connection = HubConnectionBuilder.create("https://example.com/chathub") {
-    transportEnum = TransportEnum.LongPolling
+    transports = setOf(TransportEnum.LongPolling)
 }
 ```
 
-## Automatic Transport Selection
+## Transport Selection and Fallback
 
-By default, SignalRKore will automatically select the best available transport based on what the server supports. The order of preference is:
+By default, all transports are allowed. SignalRKore uses the transports the server offers, in the order the server offers them (by default WebSockets, Server-Sent Events, Long Polling), skipping the ones not allowed by `transports`.
 
-1. WebSockets
-2. Server-Sent Events
-3. Long Polling
+If a transport fails to start, for example because a proxy blocks WebSockets, SignalRKore negotiates again and tries the next one. If none of them can be started, `start` throws `TransportsFailedException`, which contains the error of each transport that was tried. When only one transport could be tried, its error is thrown directly.
 
 ```kotlin
 val connection = HubConnectionBuilder.create("https://example.com/chathub") {
-    transportEnum = TransportEnum.All  // Default
+    transports = setOf(TransportEnum.WebSockets, TransportEnum.LongPolling)
 }
 ```
-
-## Transport Fallback
-
-Currently, SignalRKore does not support automatic transport fallback. If a transport fails to connect, the connection will fail. You need to handle reconnection manually or use the automatic reconnect feature.
 
 ## Custom Transport
 
@@ -75,7 +69,6 @@ The `TransportEnum` enum defines the available transport types:
 
 ```kotlin
 enum class TransportEnum {
-    All,
     WebSockets,
     ServerSentEvents,
     LongPolling
@@ -97,7 +90,6 @@ enum class TransportEnum {
 
 | Value | Description |
 |-------|-------------|
-| `All` | Automatically selects the best available transport |
 | `WebSockets` | Uses WebSockets transport |
 | `ServerSentEvents` | Uses Server-Sent Events transport |
 | `LongPolling` | Uses Long Polling transport |
