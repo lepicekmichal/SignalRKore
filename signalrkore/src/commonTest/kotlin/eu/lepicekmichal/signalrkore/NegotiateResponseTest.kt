@@ -29,7 +29,11 @@ class NegotiateResponseTest {
         assertEquals(1, response.negotiateVersion)
         assertEquals(
             listOf(TransportEnum.WebSockets, TransportEnum.ServerSentEvents, TransportEnum.LongPolling),
-            response.availableTransports.transports,
+            response.availableTransports.transports(TransferFormat.Text),
+        )
+        assertEquals(
+            listOf(TransportEnum.WebSockets, TransportEnum.LongPolling),
+            response.availableTransports.transports(TransferFormat.Binary),
         )
     }
 

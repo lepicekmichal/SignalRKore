@@ -11,8 +11,8 @@ enum class TransportEnum {
     WebSockets,
 }
 
-internal val List<AvailableTransport>.transports: List<TransportEnum>
-    get() = mapNotNull {
+internal fun List<AvailableTransport>.transports(format: TransferFormat): List<TransportEnum> =
+    filter { format in it.transferFormats }.map {
         when (it.transport) {
             TransportEnumResponse.ServerSentEvents -> TransportEnum.ServerSentEvents
             TransportEnumResponse.LongPolling -> TransportEnum.LongPolling

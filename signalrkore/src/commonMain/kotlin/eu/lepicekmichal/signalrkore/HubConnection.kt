@@ -16,8 +16,6 @@ import io.ktor.http.URLBuilder
 import io.ktor.http.appendPathSegments
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.appendIfNameAbsent
-import io.ktor.utils.io.core.String
-import io.ktor.utils.io.core.toByteArray
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -200,7 +198,7 @@ class HubConnection private constructor(
         }
 
         val handshake = Json.encodeToString(Handshake(protocol = protocol.name, version = protocol.version)) + RECORD_SEPARATOR
-        transport.send(handshake.toByteArray())
+        transport.send(handshake.encodeToByteArray())
 
         val handshakeRemaining = handleHandshake(transport)
 
@@ -255,7 +253,9 @@ class HubConnection private constructor(
     private suspend fun startAvailableTransport(headers: Map<String, String>): Pair<TransportEnum, Transport> {
         val initialNegotiation = startNegotiate(url = baseUrl, headers = headers, negotiateAttempts = 0)
 
-        val candidates = initialNegotiation.transports.filter { it in transports }
+        val candidates = initialNegotiation.transports
+            .filter { it in transports }
+            .filterNot { it == TransportEnum.ServerSentEvents && protocol.transferFormat == TransferFormat.Binary }
         if (candidates.isEmpty()) throw RuntimeException("There were no compatible transports on the server.")
 
         var negotiation: Negotiation? = initialNegotiation
@@ -336,7 +336,7 @@ class HubConnection private constructor(
                 val finalUrl: String = URLBuilder(url).apply { parameters.append("id", connectionToken) }.buildString()
 
                 return Negotiation(
-                    transports = response.availableTransports.transports,
+                    transports = response.availableTransports.transports(protocol.transferFormat),
                     url = finalUrl,
                     headers = headers,
                 )
@@ -367,14 +367,13 @@ class HubConnection private constructor(
 
     private suspend fun handleHandshake(transport: Transport): ByteArray? {
         val payload = withTimeoutOrNull(handshakeResponseTimeout) { transport.receive().first() }
-            ?.let { String(it) }
             ?: throw RuntimeException("Timed out waiting for the handshake response from the server.")
 
-        val separatorIndex = payload.indexOf(RECORD_SEPARATOR)
+        val separatorIndex = payload.indexOf(RECORD_SEPARATOR.code.toByte())
         if (separatorIndex == -1) throw RuntimeException("HubMessage is incomplete.")
 
         val handshake = try {
-            Json.decodeFromString<HandshakeResponse>(payload.substring(0, separatorIndex))
+            Json.decodeFromString<HandshakeResponse>(payload.decodeToString(0, separatorIndex))
         } catch (ex: SerializationException) {
             throw RuntimeException("An invalid handshake response was received from the server.", ex)
         }
@@ -383,7 +382,7 @@ class HubConnection private constructor(
             throw RuntimeException("Error in handshake ${handshake.error}")
         }
 
-        return payload.substring(separatorIndex + 1).takeIf { it.isNotEmpty() }?.toByteArray()
+        return payload.copyOfRange(separatorIndex + 1, payload.size).takeIf { it.isNotEmpty() }
     }
 
     private suspend fun reconnect(cause: Throwable?, message: String? = null) {
