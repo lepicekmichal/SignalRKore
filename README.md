@@ -68,7 +68,6 @@ SignalRKore is released under the [Apache 2.0 license](https://github.com/lepice
 
 - [x] Readme
 - [x] Documentation
-- [ ] Add example project
 - [x] Fix up ServerSentEvents' http client
 - [x] Add logging
 - [x] Error handling
