@@ -16,8 +16,8 @@ dependencyResolutionManagement {
 rootProject.name = "SignalRKore"
 
 include(
-    ":androidApp",
+//    ":androidApp",
     ":signalrkore",
 )
 
-enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+//enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
