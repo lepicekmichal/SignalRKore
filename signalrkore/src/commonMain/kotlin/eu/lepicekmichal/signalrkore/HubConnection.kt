@@ -33,11 +33,11 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.IOException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -225,7 +225,17 @@ class HubConnection private constructor(
             }
         }
 
-        val handshakeRemaining = handleHandshake(transport)
+        val handshakeRemaining = try {
+            handleHandshake(transport)
+        } catch (ex: Exception) {
+            if (!reconnectionAttempt) {
+                if (automaticReconnect !is AutomaticReconnect.Inactive) reconnect(ex.message)
+                else stop(ex.message)
+                return
+            } else {
+                throw ex
+            }
+        }
 
         _connectionState.value = HubConnectionState.CONNECTED
 
@@ -341,7 +351,9 @@ class HubConnection private constructor(
     }.buildString()
 
     private suspend fun handleHandshake(transport: Transport): ByteArray? {
-        val payload = String(transport.receive().onEmpty { delay(handshakeResponseTimeout) }.first())
+        val payload = withTimeoutOrNull(handshakeResponseTimeout) { transport.receive().first() }
+            ?.let { String(it) }
+            ?: throw RuntimeException("Timed out waiting for the handshake response from the server.")
 
         val separatorIndex = payload.indexOf(RECORD_SEPARATOR)
         if (separatorIndex == -1) throw RuntimeException("HubMessage is incomplete.")
