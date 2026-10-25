@@ -3,7 +3,7 @@ import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.vanniktech.publish)
@@ -14,13 +14,15 @@ group = requireNotNull(project.findProperty("GROUP"))
 version = requireNotNull(project.findProperty("VERSION_NAME"))
 
 kotlin {
-    androidTarget {
-        publishLibraryVariants("release")
+    android {
+        namespace = "eu.lepicekmichal.signalrkore"
+        compileSdk = 34
+        minSdk = 21
 
-        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
-            compilerOptions {
-                jvmTarget.set(JvmTarget.JVM_1_8)
-            }
+        withHostTest {}
+
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_1_8)
         }
     }
 
@@ -51,7 +53,7 @@ kotlin {
             }
         }
 
-        val commonMain by getting {
+        commonMain {
             kotlin.srcDir(project.layout.buildDirectory.dir("generated/kotlin").get().asFile)
 
             dependencies {
@@ -60,25 +62,30 @@ kotlin {
                 implementation(libs.kotlinx.serialization.json)
             }
         }
-        val commonTest by getting {
+        commonTest {
             dependencies {
                 implementation(kotlin("test"))
                 implementation(libs.kotlinx.coroutines.test)
             }
         }
-        val jvmMain by getting {
+        val jvmCommonMain = create("jvmCommonMain") {
+            dependsOn(commonMain.get())
+
             dependencies {
                 implementation(libs.ktor.okhttp)
             }
         }
-        val jvmTest by getting {
+        jvmMain {
+            dependsOn(jvmCommonMain)
+        }
+        jvmTest {
             dependencies {
                 implementation(libs.ktor.server.cio)
                 implementation(libs.ktor.server.websockets)
             }
         }
-        val androidMain by getting {
-            dependsOn(jvmMain)
+        androidMain {
+            dependsOn(jvmCommonMain)
         }
 
         if (OperatingSystem.current().isMacOsX) {
@@ -87,26 +94,6 @@ kotlin {
             }
         }
     }
-}
-
-android {
-    compileSdk = 34
-    sourceSets {
-        getByName("main") {
-            manifest.srcFile("src/androidMain/AndroidManifest.xml")
-        }
-    }
-
-    defaultConfig {
-        minSdk = 21
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    namespace = "eu.lepicekmichal.signalrkore"
 }
 
 mavenPublishing {
