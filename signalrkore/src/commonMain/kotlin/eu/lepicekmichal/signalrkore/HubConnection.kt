@@ -40,9 +40,9 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.io.EOFException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import okio.EOFException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource

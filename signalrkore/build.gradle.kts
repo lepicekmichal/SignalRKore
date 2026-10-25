@@ -55,12 +55,9 @@ kotlin {
             kotlin.srcDir(project.layout.buildDirectory.dir("generated/kotlin").get().asFile)
 
             dependencies {
-                implementation(libs.kotlin.stdlib.common)
                 implementation(libs.ktor.core)
                 implementation(libs.ktor.websockets)
                 implementation(libs.kotlinx.serialization.json)
-                implementation(libs.kotlinx.datetime)
-                implementation(libs.okio)
             }
         }
         val commonTest by getting {
@@ -71,7 +68,6 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation(libs.okhttp)
                 implementation(libs.ktor.okhttp)
             }
         }
@@ -136,18 +132,18 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     dependsOn += tasks["HubCommunicationGeneration"]
 }
 
-tasks.dokkaHtml {
-    outputDirectory.set(layout.buildDirectory.dir("dokka"))
+dokka {
+    dokkaPublications.html {
+        outputDirectory.set(layout.buildDirectory.dir("dokka"))
+    }
 
-    dokkaSourceSets {
-        configureEach {
-            includes.from("Module.md")
+    dokkaSourceSets.configureEach {
+        includes.from("Module.md")
 
-            sourceLink {
-                localDirectory.set(file("src"))
-                remoteUrl.set(uri("https://github.com/lepicekmichal/SignalRKore/tree/main/signalrkore/src").toURL())
-                remoteLineSuffix.set("#L")
-            }
+        sourceLink {
+            localDirectory.set(file("src"))
+            remoteUrl("https://github.com/lepicekmichal/SignalRKore/tree/main/signalrkore/src")
+            remoteLineSuffix.set("#L")
         }
     }
 }

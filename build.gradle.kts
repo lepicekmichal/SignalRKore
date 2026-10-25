@@ -11,8 +11,11 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform) apply false
     alias(libs.plugins.vanniktech.publish) apply false
     alias(libs.plugins.dokka)
-    id("org.jetbrains.compose") version "1.8.2" apply false
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.0" apply false
+}
+
+dependencies {
+    dokka(project(":signalrkore"))
+    dokka(project(":signalrkore-msgpack"))
 }
 
 buildscript {
@@ -31,8 +34,6 @@ allprojects {
     tasks.withType<KotlinCommonCompile>().configureEach {
         compilerOptions {
             freeCompilerArgs.add("-Xexpect-actual-classes")
-            freeCompilerArgs.add("-Xcontext-parameters")
-            freeCompilerArgs.add("-Xwhen-guards")
 
             optIn.add("kotlin.time.ExperimentalTime")
         }
@@ -40,21 +41,13 @@ allprojects {
     tasks.withType<KotlinJvmCompile>().configureEach {
         compilerOptions {
             freeCompilerArgs.add("-Xexpect-actual-classes")
-            freeCompilerArgs.add("-Xcontext-parameters")
-            freeCompilerArgs.add("-Xwhen-guards")
 
             optIn.add("kotlin.time.ExperimentalTime")
         }
     }
     tasks.withType<KotlinNativeCompile>().configureEach {
         compilerOptions {
-            freeCompilerArgs.add("-Xcontext-parameters")
-
             optIn.add("kotlin.time.ExperimentalTime")
         }
     }
-}
-
-tasks.register("clean", Delete::class) {
-    delete(rootProject.buildDir)
 }

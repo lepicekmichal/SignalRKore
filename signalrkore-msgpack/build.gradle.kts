@@ -108,18 +108,18 @@ tasks.withType<Test>().configureEach {
     systemProperty("kotlinx.coroutines.stacktrace.recovery", "false")
 }
 
-tasks.dokkaHtml {
-    outputDirectory.set(layout.buildDirectory.dir("dokka"))
+dokka {
+    dokkaPublications.html {
+        outputDirectory.set(layout.buildDirectory.dir("dokka"))
+    }
 
-    dokkaSourceSets {
-        configureEach {
-            includes.from("Module.md")
+    dokkaSourceSets.configureEach {
+        includes.from("Module.md")
 
-            sourceLink {
-                localDirectory.set(file("src"))
-                remoteUrl.set(uri("https://github.com/lepicekmichal/SignalRKore/tree/main/signalrkore-msgpack/src").toURL())
-                remoteLineSuffix.set("#L")
-            }
+        sourceLink {
+            localDirectory.set(file("src"))
+            remoteUrl("https://github.com/lepicekmichal/SignalRKore/tree/main/signalrkore-msgpack/src")
+            remoteLineSuffix.set("#L")
         }
     }
 }

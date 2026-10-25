@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.receiveAsFlow
-import okio.EOFException
+import kotlinx.io.EOFException
 
 internal class WebSocketTransport(
     private val headers: Map<String, String>,
