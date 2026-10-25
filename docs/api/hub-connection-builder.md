@@ -140,7 +140,7 @@ HttpClient {
 You can specify a custom hub protocol:
 
 ```kotlin
-protocol = JsonHubProtocol(logger)
+protocol = JsonHubProtocol()
 ```
 
 ### JSON Serialization
@@ -189,7 +189,7 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
         install(HttpTimeout)
         install(ContentNegotiation) { json() }
     }
-    protocol = JsonHubProtocol(logger)
+    protocol = JsonHubProtocol()
     json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -225,6 +225,6 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 | `headers`                  | `Map<String, String>`   | `emptyMap()` | HTTP headers to include in requests |
 | `accessTokenProvider`      | `(suspend () -> String)?` | `null` | Access token for authentication (sets the "Authorization" header with "Bearer" prefix) |
 | `httpClient`               | `HttpClient?`           | `null` | Custom Ktor HTTP client |
-| `protocol`                 | `HubProtocol`           | `JsonHubProtocol(logger, json)` | The protocol used for communication with the hub |
+| `protocol`                 | `HubProtocol`           | `JsonHubProtocol(json)` | The protocol used for communication with the hub |
 | `json`                     | `Json`                  | `Json { ignoreUnknownKeys = true }` | JSON serializer |
 | `logger`                   | `Logger`                | `Logger.Empty` | Logger for logging messages |

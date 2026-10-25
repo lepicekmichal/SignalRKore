@@ -80,7 +80,7 @@ class HttpHubConnectionBuilder(private val url: String) {
         skipNegotiate = skipNegotiate,
         automaticReconnect = automaticReconnect,
         httpClient = httpClient,
-        protocol = if (::protocol.isInitialized) protocol else JsonHubProtocol(logger, json),
+        protocol = if (::protocol.isInitialized) protocol else JsonHubProtocol(json),
         handshakeResponseTimeout = handshakeResponseTimeout,
         headers = headers,
         accessTokenProvider = accessTokenProvider,

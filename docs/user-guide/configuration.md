@@ -162,7 +162,7 @@ httpClient = HttpClient(OkHttp) {
 You can specify the hub protocol:
 
 ```kotlin
-protocol = JsonHubProtocol(logger)
+protocol = JsonHubProtocol()
 ```
 
 Two protocols are available:
@@ -183,7 +183,7 @@ implementation("eu.lepicekmichal.signalrkore:signalrkore-msgpack:${signalrkoreVe
 and set the protocol:
 
 ```kotlin
-protocol = MessagePackHubProtocol(logger)
+protocol = MessagePackHubProtocol()
 ```
 
 The server has to enable it with `AddMessagePackProtocol()`. Keep in mind that:
@@ -196,7 +196,6 @@ Payloads are encoded by the `MessagePack` format, which you can configure and pa
 
 ```kotlin
 protocol = MessagePackHubProtocol(
-    logger = logger,
     messagePack = MessagePack {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -219,7 +218,7 @@ json = Json {
 }
 ```
 
-This is useful if you need to configure the JSON serializer with custom settings or modules. The `json` instance is also used to read the negotiate response with the default HTTP client. When you set the `protocol` yourself, pass the `Json` instance to the protocol: `JsonHubProtocol(logger, json)`.
+This is useful if you need to configure the JSON serializer with custom settings or modules. The `json` instance is also used to read the negotiate response with the default HTTP client. When you set the `protocol` yourself, pass the `Json` instance to the protocol: `JsonHubProtocol(json)`.
 
 For example, you can register custom serializers for specific types:
 

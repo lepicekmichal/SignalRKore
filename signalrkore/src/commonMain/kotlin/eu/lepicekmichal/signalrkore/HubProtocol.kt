@@ -20,9 +20,10 @@ interface HubProtocol {
     /**
      * Creates a new list of [HubMessage]s.
      * @param payload A ByteArray representation of one or more [HubMessage]s.
+     * @param logger The logger of the connection, for decoded messages and messages that could not be decoded.
      * @return A list of [HubMessage]s.
      */
-    fun parseMessages(payload: ByteArray): List<HubMessage>
+    fun parseMessages(payload: ByteArray, logger: Logger): List<HubMessage>
 
     /**
      * Writes the specified [HubMessage] to a ByteArray.

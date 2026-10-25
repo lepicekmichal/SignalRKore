@@ -487,7 +487,7 @@ class HubConnection private constructor(
 
     private suspend fun processReceived(payload: ByteArray) {
         resetServerTimeout()
-        val messages = protocol.parseMessages(payload)
+        val messages = protocol.parseMessages(payload, logger)
 
         messages.forEach { message ->
             when (message) {

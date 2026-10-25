@@ -16,19 +16,15 @@ import kotlinx.serialization.DeserializationStrategy
  *
  * Binary data cannot be sent over server-sent events, so the connection uses WebSockets or long polling with this protocol.
  *
- * @param logger The logger for decoded and encoded messages
  * @param messagePack The MessagePack format that encodes and decodes the payloads of messages (arguments, stream items and results)
  */
-class MessagePackHubProtocol(
-    private val logger: Logger,
-    private val messagePack: MessagePack = MessagePack,
-) : HubProtocol {
+class MessagePackHubProtocol(private val messagePack: MessagePack = MessagePack) : HubProtocol {
 
     override val name: String = PROTOCOL_NAME
     override val version: Int = PROTOCOL_VERSION
     override val transferFormat: TransferFormat = TransferFormat.Binary
 
-    override fun parseMessages(payload: ByteArray): List<HubMessage> {
+    override fun parseMessages(payload: ByteArray, logger: Logger): List<HubMessage> {
         val messages = mutableListOf<HubMessage>()
         var position = 0
         while (position < payload.size) {
@@ -51,7 +47,6 @@ class MessagePackHubProtocol(
 
     override fun writeMessage(message: HubMessage): ByteArray {
         val body = MessagePackWriter().apply { writeHubMessage(message) }
-        logger.log(Logger.Severity.INFO, { "Encoded message: ${body.toByteArray().let { it.render(0, it.size) }}" }, null)
         return MessagePackWriter().apply {
             writeVarInt(body.size)
             writeBytes(body)

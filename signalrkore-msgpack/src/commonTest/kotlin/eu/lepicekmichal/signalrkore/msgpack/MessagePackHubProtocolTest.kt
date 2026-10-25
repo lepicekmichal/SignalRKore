@@ -25,11 +25,12 @@ class MessagePackHubProtocolTest {
     data class PersonPojo<T>(val firstName: String, val lastName: String, val age: Int, val t: T)
 
     private val logs = mutableListOf<Logger.Severity>()
-    private val protocol = MessagePackHubProtocol(logger = { severity, _, _ -> logs += severity })
+    private val logger = Logger { severity, _, _ -> logs += severity }
+    private val protocol = MessagePackHubProtocol()
 
     private fun framed(body: String): ByteArray = hex(body).let { byteArrayOf(it.size.toByte()) + it }
 
-    private fun parse(body: String): HubMessage = protocol.parseMessages(framed(body)).single()
+    private fun parse(body: String): HubMessage = protocol.parseMessages(framed(body), logger).single()
 
     private fun assertWritten(expected: String, message: HubMessage) = assertEquals(hex(expected).toHex(), protocol.writeMessage(message).toHex())
 
@@ -232,7 +233,7 @@ class MessagePackHubProtocolTest {
     fun parseTwoMessages() {
         val messages = protocol.parseMessages(
             hex("0b 96 01 80 c0 a3 6f 6e 65 91 2a 90 0b 96 01 80 c0 a3 74 77 6f 91 2b 90")
-        )
+        , logger)
 
         assertEquals(listOf("one", "two"), messages.map { assertIs<HubMessage.Invocation.NonBlocking>(it).target })
         assertEquals(43, (messages[1] as HubMessage.Invocation).arguments.single().decode(Int.serializer()))
@@ -282,47 +283,47 @@ class MessagePackHubProtocolTest {
     fun parsedMessageCanBeWrittenBack() {
         val bytes = framed("96 01 80 a3 78 79 7a a6 6d 65 74 68 6f 64 92 2a 81 a1 61 c4 01 ff 91 a1 73")
 
-        assertContentEquals(bytes, protocol.writeMessage(protocol.parseMessages(bytes).single()))
+        assertContentEquals(bytes, protocol.writeMessage(protocol.parseMessages(bytes, logger).single()))
     }
 
     @Test
     fun parseMessageWithTwoByteLengthHeader() {
         val body = "96 01 80 c0 a4 74 65 73 74 91 d9 7a " + "61 ".repeat(122) + "90"
-        val message = assertIs<HubMessage.Invocation.NonBlocking>(protocol.parseMessages(hex("87 01 $body")).single())
+        val message = assertIs<HubMessage.Invocation.NonBlocking>(protocol.parseMessages(hex("87 01 $body"), logger).single())
 
         assertEquals("a".repeat(122), message.arguments.single().decode(String.serializer()))
     }
 
     @Test
     fun lengthHeaderLongerThanPayloadFails() {
-        val ex = assertFailsWith<RuntimeException> { protocol.parseMessages(hex("0d 96 01 80 c0 a4 74 65 73 74 91 2a 90")) }
+        val ex = assertFailsWith<RuntimeException> { protocol.parseMessages(hex("0d 96 01 80 c0 a4 74 65 73 74 91 2a 90"), logger) }
 
         assertEquals("MessagePack message was length 12 but claimed to be length 13.", ex.message)
     }
 
     @Test
     fun lengthHeaderShorterThanMessageFails() {
-        assertFailsWith<RuntimeException> { protocol.parseMessages(hex("0b 96 01 80 c0 a4 74 65 73 74 91 2a 90")) }
+        assertFailsWith<RuntimeException> { protocol.parseMessages(hex("0b 96 01 80 c0 a4 74 65 73 74 91 2a 90"), logger) }
         assertTrue(Logger.Severity.ERROR in logs)
     }
 
     @Test
     fun incompleteOrOversizedLengthHeaderFails() {
-        assertEquals("The length header was incomplete", assertFailsWith<RuntimeException> { protocol.parseMessages(hex("80")) }.message)
+        assertEquals("The length header was incomplete", assertFailsWith<RuntimeException> { protocol.parseMessages(hex("80"), logger) }.message)
         assertEquals(
             "Messages over 2GB in size are not supported",
-            assertFailsWith<RuntimeException> { protocol.parseMessages(hex("ff ff ff ff 08")) }.message,
+            assertFailsWith<RuntimeException> { protocol.parseMessages(hex("ff ff ff ff 08"), logger) }.message,
         )
     }
 
     @Test
     fun emptyPayloadHasNoMessages() {
-        assertTrue(protocol.parseMessages(ByteArray(0)).isEmpty())
+        assertTrue(protocol.parseMessages(ByteArray(0), logger).isEmpty())
     }
 
     @Test
     fun unknownMessageTypeIsSkippedAndLogged() {
-        val messages = protocol.parseMessages(hex("04 92 08 cc 24 02 91 06"))
+        val messages = protocol.parseMessages(hex("04 92 08 cc 24 02 91 06"), logger)
 
         assertIs<HubMessage.Ping>(messages.single())
         assertTrue(Logger.Severity.ERROR in logs)

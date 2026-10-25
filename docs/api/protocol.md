@@ -17,10 +17,12 @@ interface HubProtocol {
     val version: Int
     val transferFormat: TransferFormat
 
-    fun parseMessages(payload: ByteArray): List<HubMessage>
+    fun parseMessages(payload: ByteArray, logger: Logger): List<HubMessage>
     fun writeMessage(message: HubMessage): ByteArray
 }
 ```
+
+Protocols don't hold a logger. The connection passes its [logger](../user-guide/configuration.md#logging) to `parseMessages`, so a protocol can log decoded messages and the ones it had to skip.
 
 ## JsonHubProtocol
 
@@ -28,14 +30,14 @@ The `JsonHubProtocol` class is the default implementation of the `HubProtocol` i
 
 ```kotlin
 val connection = HubConnectionBuilder.create("https://example.com/chathub") {
-    protocol = JsonHubProtocol(logger)  // Default
+    protocol = JsonHubProtocol()  // Default
 }
 ```
 
 Payloads are encoded with the `json` instance of the builder. When you set the protocol yourself, pass your `Json` instance to it:
 
 ```kotlin
-protocol = JsonHubProtocol(logger, json = Json { ignoreUnknownKeys = true })
+protocol = JsonHubProtocol(json = Json { ignoreUnknownKeys = true })
 ```
 
 ## MessagePackHubProtocol
@@ -53,7 +55,7 @@ dependencies {
 
 ```kotlin
 val connection = HubConnectionBuilder.create("https://example.com/chathub") {
-    protocol = MessagePackHubProtocol(logger)
+    protocol = MessagePackHubProtocol()
 }
 ```
 
@@ -101,7 +103,6 @@ Pass a configured `MessagePack` instance to change how payloads are encoded:
 
 ```kotlin
 protocol = MessagePackHubProtocol(
-    logger = logger,
     messagePack = MessagePack {
         ignoreUnknownKeys = false  // default true: keys without a matching property are skipped
         encodeDefaults = false     // default true: properties equal to their default values are written
@@ -124,7 +125,7 @@ class MyHubProtocol : HubProtocol {
     override val version: Int = 1
     override val transferFormat: TransferFormat = TransferFormat.Text
 
-    override fun parseMessages(payload: ByteArray): List<HubMessage> {
+    override fun parseMessages(payload: ByteArray, logger: Logger): List<HubMessage> {
         // Your implementation
     }
 
@@ -184,7 +185,7 @@ enum class TransferFormat {
 
 | Name | Parameters | Return Type | Description |
 |------|------------|-------------|-------------|
-| `parseMessages` | `payload: ByteArray` | `List<HubMessage>` | Parses messages from a byte array |
+| `parseMessages` | `payload: ByteArray`, `logger: Logger` | `List<HubMessage>` | Parses messages from a byte array |
 | `writeMessage` | `message: HubMessage` | `ByteArray` | Writes a message to a byte array |
 
 ### JsonHubProtocol
@@ -193,7 +194,6 @@ enum class TransferFormat {
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `logger` | `Logger` | | The logger for decoded and encoded messages |
 | `json` | `Json` | `Json` | The Json instance for payloads |
 
 #### Properties
@@ -210,7 +210,6 @@ enum class TransferFormat {
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `logger` | `Logger` | | The logger for decoded and encoded messages |
 | `messagePack` | `MessagePack` | `MessagePack` | The MessagePack format for payloads |
 
 #### Properties

@@ -73,7 +73,9 @@ abstract class MessagePackIntegrationTest(private val transport: TransportEnum) 
 
     private val note = Note("hello", Instant.fromEpochSeconds(1600000000, 250_000_000), Priority.High)
 
-    private val protocol = MessagePackHubProtocol(logger = { _, _, _ -> })
+    private val logger = Logger { _, _, _ -> }
+
+    private val protocol = MessagePackHubProtocol()
 
     private var server: EmbeddedServer<*, *>? = null
 
@@ -91,13 +93,13 @@ abstract class MessagePackIntegrationTest(private val transport: TransportEnum) 
     }
 
     private suspend fun receivePayload(payload: ByteArray, sentWithHandshakeResponse: ByteArray) {
-        if (handshakeDone) return protocol.parseMessages(payload).forEach { fromClient.send(it) }
+        if (handshakeDone) return protocol.parseMessages(payload, logger).forEach { fromClient.send(it) }
 
         val separator = payload.indexOf(0x1E)
         handshakes.send(payload.decodeToString(0, separator))
         handshakeDone = true
         toClient.send("{}\u001e".encodeToByteArray() + sentWithHandshakeResponse)
-        protocol.parseMessages(payload.copyOfRange(separator + 1, payload.size)).forEach { fromClient.send(it) }
+        protocol.parseMessages(payload.copyOfRange(separator + 1, payload.size), logger).forEach { fromClient.send(it) }
     }
 
     private fun startHub(sentWithHandshakeResponse: ByteArray = ByteArray(0)): Int {
@@ -145,7 +147,7 @@ abstract class MessagePackIntegrationTest(private val transport: TransportEnum) 
 
     private fun connection(port: Int): HubConnection = HubConnectionBuilder.create("http://127.0.0.1:$port/hub") {
         transports = setOf(TransportEnum.ServerSentEvents, transport)
-        protocol = MessagePackHubProtocol(logger = Logger { _, _, _ -> })
+        protocol = MessagePackHubProtocol()
     }
 
     private suspend fun sendToClient(message: HubMessage) = toClient.send(protocol.writeMessage(message))

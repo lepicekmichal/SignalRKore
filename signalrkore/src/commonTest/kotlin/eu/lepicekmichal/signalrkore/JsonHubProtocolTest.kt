@@ -19,10 +19,11 @@ import kotlin.test.assertTrue
 class JsonHubProtocolTest {
 
     private val logs = mutableListOf<Logger.Severity>()
-    private val protocol = JsonHubProtocol(logger = { severity, _, _ -> logs += severity })
+    private val logger = Logger { severity, _, _ -> logs += severity }
+    private val protocol = JsonHubProtocol()
 
     private fun parse(vararg messages: String) =
-        protocol.parseMessages(messages.joinToString("") { it + RECORD_SEPARATOR }.encodeToByteArray())
+        protocol.parseMessages(messages.joinToString("") { it + RECORD_SEPARATOR }.encodeToByteArray(), logger)
 
     private fun value(element: JsonElement) = JsonValue(element, Json)
 
@@ -90,7 +91,7 @@ class JsonHubProtocolTest {
 
     @Test
     fun parseEmptyPayload() {
-        assertEquals(emptyList(), protocol.parseMessages(ByteArray(0)))
+        assertEquals(emptyList(), protocol.parseMessages(ByteArray(0), logger))
     }
 
     @Test
@@ -198,7 +199,7 @@ class JsonHubProtocolTest {
 
     @Test
     fun incompleteMessageThrows() {
-        assertFailsWith<RuntimeException> { protocol.parseMessages("""{"type":6}""".encodeToByteArray()) }
+        assertFailsWith<RuntimeException> { protocol.parseMessages("""{"type":6}""".encodeToByteArray(), logger) }
     }
 
     @Test
@@ -226,7 +227,7 @@ class JsonHubProtocolTest {
 
     @Test
     fun writeArgumentsWithTheConfiguredJson() {
-        val protocol = JsonHubProtocol(logger = { _, _, _ -> }, json = Json { encodeDefaults = true })
+        val protocol = JsonHubProtocol(json = Json { encodeDefaults = true })
         val message = HubMessage.StreamItem(invocationId = "1", item = HubValue.Encodable(Person("John", "Doe"), Person.serializer()))
 
         assertEquals(
@@ -249,9 +250,9 @@ class JsonHubProtocolTest {
 
     @Test
     fun decodeParsedValuesWithTheConfiguredJson() {
-        val protocol = JsonHubProtocol(logger = { _, _, _ -> }, json = Json { ignoreUnknownKeys = true })
+        val protocol = JsonHubProtocol(json = Json { ignoreUnknownKeys = true })
         val payload = """{"type":2,"invocationId":"1","item":{"firstName":"John","lastName":"Doe","nickname":"JD"}}""" + RECORD_SEPARATOR
-        val message = assertIs<HubMessage.StreamItem>(protocol.parseMessages(payload.encodeToByteArray()).single())
+        val message = assertIs<HubMessage.StreamItem>(protocol.parseMessages(payload.encodeToByteArray(), logger).single())
 
         assertEquals(Person("John", "Doe"), assertIs<HubValue.Decodable>(message.item).decode(Person.serializer()))
     }

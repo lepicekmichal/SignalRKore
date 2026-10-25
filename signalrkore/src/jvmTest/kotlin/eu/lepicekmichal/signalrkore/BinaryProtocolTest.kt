@@ -17,12 +17,12 @@ import kotlin.time.Duration.Companion.seconds
 
 class BinaryProtocolTest : HubTest() {
 
-    private class RecordingBinaryProtocol : HubProtocol by JsonHubProtocol(logger = { _, _, _ -> }) {
+    private class RecordingBinaryProtocol : HubProtocol by JsonHubProtocol() {
         val payloads: MutableList<ByteArray> = Collections.synchronizedList(mutableListOf())
 
         override val transferFormat: TransferFormat = TransferFormat.Binary
 
-        override fun parseMessages(payload: ByteArray): List<HubMessage> {
+        override fun parseMessages(payload: ByteArray, logger: Logger): List<HubMessage> {
             payloads += payload
             return emptyList()
         }

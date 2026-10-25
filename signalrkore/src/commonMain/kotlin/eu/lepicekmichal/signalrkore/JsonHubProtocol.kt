@@ -20,19 +20,15 @@ import kotlinx.serialization.json.put
 /**
  * The JSON hub protocol (`json`, version 1), the default protocol of SignalR.
  *
- * @param logger The logger for decoded and encoded messages
  * @param json The Json instance that encodes and decodes the payloads of messages (arguments, stream items and results)
  */
-class JsonHubProtocol(
-    private val logger: Logger,
-    private val json: Json = Json,
-) : HubProtocol {
+class JsonHubProtocol(private val json: Json = Json) : HubProtocol {
 
     override val name: String = PROTOCOL_NAME
     override val version: Int = PROTOCOL_VERSION
     override val transferFormat: TransferFormat = TransferFormat.Text
 
-    override fun parseMessages(payload: ByteArray): List<HubMessage> {
+    override fun parseMessages(payload: ByteArray, logger: Logger): List<HubMessage> {
         val payloadString = payload.decodeToString(0, payload.size)
         if (payloadString.isEmpty()) return emptyList()
         if (payloadString.substring(payloadString.length - 1)[0] != RECORD_SEPARATOR) throw RuntimeException("HubMessage is incomplete.")
@@ -52,8 +48,7 @@ class JsonHubProtocol(
     }
 
     override fun writeMessage(message: HubMessage): ByteArray =
-        (Json.encodeToString(JsonObject.serializer(), message.toJsonObject())
-            .also { logger.log(Logger.Severity.INFO, { "Encoded message: $it" }, null) } + RECORD_SEPARATOR).toByteArray()
+        (Json.encodeToString(JsonObject.serializer(), message.toJsonObject()) + RECORD_SEPARATOR).toByteArray()
 
     private fun HubMessage.toJsonObject(): JsonObject = buildJsonObject {
         put("type", type)

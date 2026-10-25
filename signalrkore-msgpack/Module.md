@@ -5,6 +5,6 @@ format compatible with the MessagePack-CSharp library used by ASP.NET Core Signa
 
 ```kotlin
 val connection = HubConnectionBuilder.create("https://example.com/chathub") {
-    protocol = MessagePackHubProtocol(logger)
+    protocol = MessagePackHubProtocol()
 }
 ```
