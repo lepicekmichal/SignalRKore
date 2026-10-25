@@ -1,13 +1,15 @@
 # SignalRKore
 
 [![Maven Central](https://img.shields.io/maven-central/v/eu.lepicekmichal.signalrkore/signalrkore)](https://mvnrepository.com/artifact/eu.lepicekmichal.signalrkore)
-[![Kotlin](https://img.shields.io/badge/kotlin-2.4.20-blue.svg?logo=kotlin)](http://kotlinlang.org)
-[![GitHub License](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0)
+[![Tests](https://github.com/lepicekmichal/SignalRKore/actions/workflows/tests.yml/badge.svg)](https://github.com/lepicekmichal/SignalRKore/actions/workflows/tests.yml)
+[![Documentation](https://img.shields.io/badge/docs-lepicekmichal.github.io-blue.svg?style=flat)](https://lepicekmichal.github.io/SignalRKore/)
+[![Kotlin](https://img.shields.io/badge/kotlin-2.4.20-blue.svg?logo=kotlin)](https://kotlinlang.org)
+[![GitHub License](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Kotlin Weekly](https://img.shields.io/badge/Kotlin%20Weekly-%23416-purple?style=flat)](https://mailchi.mp/kotlinweekly/kotlin-weekly-416)
 
-![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
-![badge-jvm](http://img.shields.io/badge/platform-jvm-DB413D.svg?style=flat)
-![badge-ios](http://img.shields.io/badge/platform-ios-lightgray?style=flat)
+![badge-android](https://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
+![badge-jvm](https://img.shields.io/badge/platform-jvm-DB413D.svg?style=flat)
+![badge-ios](https://img.shields.io/badge/platform-ios-lightgray?style=flat)
 
 ## Overview
 
@@ -15,21 +17,38 @@ SignalRKore is a Kotlin Multiplatform client library for ASP.NET Core SignalR. I
 
 ## Why should you use **this** library
 
-|                            | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) |             SignalRKore             |
-|:---------------------------|:--------------------------------------------------------------------------------------------:|:-----------------------------------:|
-| Written in                 |                                             Java                                             |               Kotlin                |
-| KMM / KMP                  |                                   :heavy_multiplication_x:                                   |          Android, JVM, iOS          |
-| Network                    |                                         OkHttp only                                          |                Ktor                 |
-| Async                      |                                            RxJava                                            |             Coroutines              |
-| Serialization              |                                   Gson (non-customizable)                                    | Kotlinx Serializable (customizable) |
-| Streams                    |                                      :heavy_check_mark:                                      |         :heavy_check_mark:          |
-| Transport fallback         |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
-| Automatic reconnect        |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
-| SSE                        |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
-| Connection status          |                                   :heavy_multiplication_x:                                   |         :heavy_check_mark:          |
-| Logging                    |                                            SLF4J                                             |          Custom interface           |
-| MsgPack                    |                                      :heavy_check_mark:                                      |         :heavy_check_mark:          |
-| Tested by time & community |                                      :heavy_check_mark:                                      |      :heavy_multiplication_x:       |
+|                         | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) |             **SignalRKore**             |
+|:------------------------|:--------------------------------------------------------------------------------------------:|:---------------------------------------:|
+| **Technology**          |                                                                                              |                                         |
+| Written in              |                                             Java                                             |                **Kotlin**               |
+| Kotlin Multiplatform    |                                             :x:                                              |          **Android, JVM, iOS**          |
+| Network                 |                                         OkHttp only                                          |                 **Ktor**                |
+| Async                   |                                            RxJava                                            |              **Coroutines**             |
+| Serialization           |                                   Gson (non-customizable)                                    | **Kotlinx Serializable (customizable)** |
+| Logging                 |                                            SLF4J                                             |           **Custom interface**          |
+| **Features**            |                                                                                              |                                         |
+| Streams                 |                                      :white_check_mark:                                      |            :white_check_mark:           |
+| Client results          |                                      :white_check_mark:                                      |            :white_check_mark:           |
+| MsgPack                 |                                      :white_check_mark:                                      |            :white_check_mark:           |
+| Transport fallback      |                                             :x:                                              |            :white_check_mark:           |
+| Automatic reconnect     |                                             :x:                                              |            :white_check_mark:           |
+| SSE                     |                                             :x:                                              |            :white_check_mark:           |
+| Connection state stream |                                             :x:                                              |            :white_check_mark:           |
+| **Community**           |                                                                                              |                                         |
+| Maintained by Microsoft |                                      :white_check_mark:                                      |                   :x:                   |
+
+## Installation
+
+SignalRKore is available on Maven Central:
+
+```kotlin
+dependencies {
+    implementation("eu.lepicekmichal.signalrkore:signalrkore:$signalrkoreVersion")
+
+    // Optional: MessagePack hub protocol
+    implementation("eu.lepicekmichal.signalrkore:signalrkore-msgpack:$signalrkoreVersion")
+}
+```
 
 ## Quick Example
 
@@ -64,7 +83,12 @@ All functionality was possible to implement only thanks to [AzureSignalR ChatRoo
 
 SignalRKore is released under the [Apache 2.0 license](https://github.com/lepicekmichal/SignalRKore/blob/main/LICENSE.txt).
 
-## TODO list
+## Roadmap
+
+- [ ] Reacting to stream invocation from server
+
+<details>
+<summary>Done</summary>
 
 - [x] Readme
 - [x] Documentation
@@ -77,4 +101,6 @@ SignalRKore is released under the [Apache 2.0 license](https://github.com/lepice
 - [x] Extend to iOS
 - [x] Implement transport fallback
 - [x] Implement automatic reconnect
-- [ ] Reacting to stream invocation from server
+- [x] MessagePack protocol
+
+</details>
