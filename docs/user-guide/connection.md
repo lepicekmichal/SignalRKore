@@ -197,11 +197,11 @@ This is useful if you need to configure the JSON serializer with custom settings
 You can provide a custom logger:
 
 ```kotlin
-logger = Logger { severity, message, cause ->
+logger = Logger { severity, msg, err ->
     when (severity) {
-        Logger.Severity.INFO -> println("INFO: ${message()}")
-        Logger.Severity.WARNING -> println("WARNING: ${message()}")
-        Logger.Severity.ERROR -> println("ERROR: ${message()}, cause: $cause")
+        Logger.Severity.INFO -> Log.i("SignalR", msg(), err)
+        Logger.Severity.WARNING -> Log.w("SignalR", msg(), err)
+        Logger.Severity.ERROR -> Log.e("SignalR", msg(), err)
     }
 }
 ```

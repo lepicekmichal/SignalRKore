@@ -240,11 +240,11 @@ protocol = JsonHubProtocol(
 You can provide a custom logger:
 
 ```kotlin
-logger = Logger { severity, message, cause ->
+logger = Logger { severity, msg, err ->
     when (severity) {
-        Logger.Severity.INFO -> println("INFO: ${message()}")
-        Logger.Severity.WARNING -> println("WARNING: ${message()}")
-        Logger.Severity.ERROR -> println("ERROR: ${message()}, cause: $cause")
+        Logger.Severity.INFO -> Log.i("SignalR", msg(), err)
+        Logger.Severity.WARNING -> Log.w("SignalR", msg(), err)
+        Logger.Severity.ERROR -> Log.e("SignalR", msg(), err)
     }
 }
 ```
@@ -253,39 +253,40 @@ logger = Logger { severity, message, cause ->
 
 You can integrate with popular logging frameworks:
 
-#### Napier (Multiplatform)
+#### Timber (Android)
 
 ```kotlin
-logger = Logger { severity, message, cause ->
+logger = Logger { severity, msg, err ->
     when (severity) {
-        Logger.Severity.INFO -> Napier.i(message())
-        Logger.Severity.WARNING -> Napier.w(message())
-        Logger.Severity.ERROR -> Napier.e(cause, message())
+        Logger.Severity.INFO -> Timber.tag("SignalR").i(err, msg())
+        Logger.Severity.WARNING -> Timber.tag("SignalR").w(err, msg())
+        Logger.Severity.ERROR -> Timber.tag("SignalR").e(err, msg())
     }
 }
 ```
 
-#### Other Logging Frameworks
-
-For other logging frameworks like SLF4J or Timber, you can use a similar approach:
+#### Napier (Multiplatform)
 
 ```kotlin
-// SLF4J
-logger = Logger { severity, message, cause ->
-    val logger = LoggerFactory.getLogger("SignalRKore")
+logger = Logger { severity, msg, err ->
     when (severity) {
-        Logger.Severity.INFO -> logger.info(message())
-        Logger.Severity.WARNING -> logger.warn(message())
-        Logger.Severity.ERROR -> logger.error(message(), cause)
+        Logger.Severity.INFO -> Napier.i(msg(), err, tag = "SignalR")
+        Logger.Severity.WARNING -> Napier.w(msg(), err, tag = "SignalR")
+        Logger.Severity.ERROR -> Napier.e(msg(), err, tag = "SignalR")
     }
 }
+```
 
-// Timber (Android)
-logger = Logger { severity, message, cause ->
+#### SLF4J (JVM)
+
+```kotlin
+val slf4j = LoggerFactory.getLogger("SignalR")
+
+logger = Logger { severity, msg, err ->
     when (severity) {
-        Logger.Severity.INFO -> Timber.i(message())
-        Logger.Severity.WARNING -> Timber.w(message())
-        Logger.Severity.ERROR -> Timber.e(cause, message())
+        Logger.Severity.INFO -> slf4j.info(msg(), err)
+        Logger.Severity.WARNING -> slf4j.warn(msg(), err)
+        Logger.Severity.ERROR -> slf4j.error(msg(), err)
     }
 }
 ```
@@ -326,11 +327,11 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
     )
 
     // Logging
-    logger = Logger { severity, message, cause ->
+    logger = Logger { severity, msg, err ->
         when (severity) {
-            Logger.Severity.INFO -> println("INFO: ${message()}")
-            Logger.Severity.WARNING -> println("WARNING: ${message()}")
-            Logger.Severity.ERROR -> println("ERROR: ${message()}, cause: $cause")
+            Logger.Severity.INFO -> Log.i("SignalR", msg(), err)
+            Logger.Severity.WARNING -> Log.w("SignalR", msg(), err)
+            Logger.Severity.ERROR -> Log.e("SignalR", msg(), err)
         }
     }
 }
