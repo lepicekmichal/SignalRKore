@@ -1,0 +1,35 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8 and 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: |
+            8
+            21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run tests
+        run: >
+          ./gradlew
+          :signalrkore:jvmTest
+          :signalrkore:testAndroidHostTest
+          :signalrkore:iosSimulatorArm64Test
+          :signalrkore-msgpack:jvmTest
+          :signalrkore-msgpack:testAndroidHostTest
+          :signalrkore-msgpack:iosSimulatorArm64Test
+          -Porg.gradle.java.installations.fromEnv=JAVA_HOME_8_ARM64
