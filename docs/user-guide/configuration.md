@@ -119,7 +119,6 @@ httpClient = HttpClient {
     install(WebSockets)
     install(SSE)
     install(HttpTimeout)
-    install(ContentNegotiation) { json() }
 }
 ```
 
@@ -129,7 +128,6 @@ This is useful if you need to configure the HTTP client with custom settings or 
 > - `WebSockets` - Required for WebSockets transport
 > - `SSE` - Required for Server-Sent Events transport
 > - `HttpTimeout` - Required for timeout handling
-> - `ContentNegotiation` with JSON - Required for serialization
 >
 > Failure to install these plugins may result in runtime errors.
 
@@ -151,7 +149,6 @@ httpClient = HttpClient(OkHttp) {
     install(WebSockets)
     install(SSE)
     install(HttpTimeout)
-    install(ContentNegotiation) { json() }
 }
 ```
 
@@ -208,28 +205,32 @@ protocol = MessagePackHubProtocol(
 
 ### JSON Serialization
 
-You can provide a custom JSON serializer for the payloads of the default `JsonHubProtocol`:
+You can provide a custom JSON serializer for the arguments, stream items and results of the JSON protocol:
 
 ```kotlin
-json = Json {
-    ignoreUnknownKeys = true
-    isLenient = true
-    // Other configuration options
-}
+protocol = JsonHubProtocol(
+    json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        // Other configuration options
+    }
+)
 ```
 
-This is useful if you need to configure the JSON serializer with custom settings or modules. The `json` instance is also used to read the negotiate response with the default HTTP client. When you set the `protocol` yourself, pass the `Json` instance to the protocol: `JsonHubProtocol(json)`.
+This is useful if you need to configure the JSON serializer with custom settings or modules. The negotiate and handshake responses of the server are always read by the library itself, so this Json instance only affects your payloads.
 
 For example, you can register custom serializers for specific types:
 
 ```kotlin
-json = Json {
-    ignoreUnknownKeys = true
-    serializersModule = SerializersModule {
-        contextual(Date::class) { DateSerializer }
-        contextual(UUID::class) { UUIDSerializer }
+protocol = JsonHubProtocol(
+    json = Json {
+        ignoreUnknownKeys = true
+        serializersModule = SerializersModule {
+            contextual(Date::class) { DateSerializer }
+            contextual(UUID::class) { UUIDSerializer }
+        }
     }
-}
+)
 ```
 
 ## Logging
@@ -314,14 +315,15 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
         install(WebSockets)
         install(SSE)
         install(HttpTimeout)
-        install(ContentNegotiation) { json() }
     }
 
     // Protocol and serialization
-    json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
+    protocol = JsonHubProtocol(
+        json = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
+    )
 
     // Logging
     logger = Logger { severity, message, cause ->
@@ -345,7 +347,6 @@ httpClient = HttpClient(Android) {
     install(WebSockets)
     install(SSE)
     install(HttpTimeout)
-    install(ContentNegotiation) { json() }
 }
 ```
 
@@ -358,7 +359,6 @@ httpClient = HttpClient(Darwin) {
     install(WebSockets)
     install(SSE)
     install(HttpTimeout)
-    install(ContentNegotiation) { json() }
 }
 ```
 

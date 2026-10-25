@@ -2,11 +2,9 @@ package eu.lepicekmichal.signalrkore
 
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.sse.SSE
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.http.HttpStatusCode
-import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.install
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
@@ -38,7 +36,6 @@ class TransportTest : HubTest() {
             install(WebSockets)
             install(SSE)
             install(HttpTimeout)
-            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
         }
 
     private suspend fun HttpHub.answerInvocations() {

@@ -4,17 +4,15 @@ import eu.lepicekmichal.signalrkore.transports.LongPollingTransport
 import eu.lepicekmichal.signalrkore.transports.ServerSentEventsTransport
 import eu.lepicekmichal.signalrkore.transports.WebSocketTransport
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.sse.SSE
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.request.headers
 import io.ktor.client.request.post
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLBuilder
 import io.ktor.http.appendPathSegments
-import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.appendIfNameAbsent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -139,7 +137,6 @@ class HubConnection private constructor(
         headers: Map<String, String>,
         accessTokenProvider: (suspend () -> String)?,
         transports: Set<TransportEnum>,
-        json: Json,
         serverTimeout: Duration,
         keepAliveInterval: Duration,
         logger: Logger,
@@ -150,7 +147,6 @@ class HubConnection private constructor(
             install(WebSockets)
             install(SSE)
             install(HttpTimeout)
-            install(ContentNegotiation) { json(Json(json) { ignoreUnknownKeys = true }) }
         },
         transports = transports,
         handshakeResponseTimeout = if (handshakeResponseTimeout.isPositive()) handshakeResponseTimeout else 15.seconds,
@@ -357,7 +353,7 @@ class HubConnection private constructor(
         if (response.status != HttpStatusCode.OK)
             throw HttpRequestException("Unexpected status code returned from negotiate: ${response.status} ${response.status.description}.", response.status.value)
 
-        return response.body()
+        return negotiateJson.decodeFromString(response.bodyAsText())
     }
 
     private fun resolveNegotiateUrl(url: String): String = URLBuilder(url).apply {
@@ -527,5 +523,6 @@ class HubConnection private constructor(
     companion object {
         private const val NEGOTIATE_VERSION = 1
         private const val MAX_NEGOTIATE_ATTEMPTS = 100
+        private val negotiateJson = Json { ignoreUnknownKeys = true }
     }
 }

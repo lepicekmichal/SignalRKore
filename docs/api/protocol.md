@@ -34,7 +34,7 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 }
 ```
 
-Payloads are encoded with the `json` instance of the builder. When you set the protocol yourself, pass your `Json` instance to it:
+To encode payloads with your own `Json` instance, pass it to the protocol:
 
 ```kotlin
 protocol = JsonHubProtocol(json = Json { ignoreUnknownKeys = true })

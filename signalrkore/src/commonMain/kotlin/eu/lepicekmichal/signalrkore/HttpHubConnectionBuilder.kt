@@ -1,7 +1,6 @@
 package eu.lepicekmichal.signalrkore
 
 import io.ktor.client.HttpClient
-import kotlinx.serialization.json.Json
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -20,7 +19,8 @@ class HttpHubConnectionBuilder(private val url: String) {
     var httpClient: HttpClient? = null
 
     /**
-     * The [HubProtocol] to be used by the [eu.lepicekmichal.signalrkore.HubConnection]
+     * The [HubProtocol] to be used by the [eu.lepicekmichal.signalrkore.HubConnection]. Defaults to [JsonHubProtocol];
+     * set `JsonHubProtocol(json)` to encode payloads with a custom Json instance.
      */
     lateinit var protocol: HubProtocol
 
@@ -43,12 +43,6 @@ class HttpHubConnectionBuilder(private val url: String) {
      * A Map representing the collection of Headers that the [eu.lepicekmichal.signalrkore.HubConnection] should send.
      */
     var headers: MutableMap<String, String> = HashMap()
-
-    /**
-     * Json instance for (de)serializing custom models coming through as payloads of the default [JsonHubProtocol].
-     * It is not used when a custom [protocol] is set.
-     */
-    var json: Json = Json
 
     /**
      * Custom logger using [eu.lepicekmichal.signalrkore.Logger].
@@ -80,12 +74,11 @@ class HttpHubConnectionBuilder(private val url: String) {
         skipNegotiate = skipNegotiate,
         automaticReconnect = automaticReconnect,
         httpClient = httpClient,
-        protocol = if (::protocol.isInitialized) protocol else JsonHubProtocol(json),
+        protocol = if (::protocol.isInitialized) protocol else JsonHubProtocol(),
         handshakeResponseTimeout = handshakeResponseTimeout,
         headers = headers,
         accessTokenProvider = accessTokenProvider,
         transports = transports,
-        json = json,
         logger = logger,
         serverTimeout = serverTimeout,
         keepAliveInterval = keepAliveInterval,

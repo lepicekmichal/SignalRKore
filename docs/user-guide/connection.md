@@ -161,7 +161,6 @@ httpClient = HttpClient {
     install(WebSockets)
     install(SSE)
     install(HttpTimeout)
-    install(ContentNegotiation) { json() }
 }
 ```
 
@@ -179,14 +178,16 @@ protocol = JsonHubProtocol()
 
 ### JSON Serialization
 
-You can provide a custom JSON serializer:
+You can provide a custom JSON serializer for the arguments, stream items and results of the JSON protocol:
 
 ```kotlin
-json = Json {
-    ignoreUnknownKeys = true
-    isLenient = true
-    // Other configuration options
-}
+protocol = JsonHubProtocol(
+    json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        // Other configuration options
+    }
+)
 ```
 
 This is useful if you need to configure the JSON serializer with custom settings or modules.

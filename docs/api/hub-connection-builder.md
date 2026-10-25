@@ -131,7 +131,6 @@ HttpClient {
     install(WebSockets)
     install(SSE)
     install(HttpTimeout)
-    install(ContentNegotiation) { json() }
 }
 ```
 
@@ -145,14 +144,16 @@ protocol = JsonHubProtocol()
 
 ### JSON Serialization
 
-You can provide a custom JSON serializer:
+You can provide a custom JSON serializer for the payloads of the JSON protocol:
 
 ```kotlin
-json = Json {
-    ignoreUnknownKeys = true
-    isLenient = true
-    // Other configuration options
-}
+protocol = JsonHubProtocol(
+    json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        // Other configuration options
+    }
+)
 ```
 
 ### Logger
@@ -187,13 +188,13 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
         install(WebSockets)
         install(SSE)
         install(HttpTimeout)
-        install(ContentNegotiation) { json() }
     }
-    protocol = JsonHubProtocol()
-    json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
+    protocol = JsonHubProtocol(
+        json = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
+    )
     logger = Logger { severity, message, cause ->
         when (severity) {
             Logger.Severity.INFO -> println("INFO: ${message()}")
@@ -225,6 +226,5 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 | `headers`                  | `Map<String, String>`   | `emptyMap()` | HTTP headers to include in requests |
 | `accessTokenProvider`      | `(suspend () -> String)?` | `null` | Access token for authentication (sets the "Authorization" header with "Bearer" prefix) |
 | `httpClient`               | `HttpClient?`           | `null` | Custom Ktor HTTP client |
-| `protocol`                 | `HubProtocol`           | `JsonHubProtocol(json)` | The protocol used for communication with the hub |
-| `json`                     | `Json`                  | `Json { ignoreUnknownKeys = true }` | JSON serializer |
+| `protocol`                 | `HubProtocol`           | `JsonHubProtocol()` | The protocol used for communication with the hub |
 | `logger`                   | `Logger`                | `Logger.Empty` | Logger for logging messages |
