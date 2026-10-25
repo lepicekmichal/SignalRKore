@@ -1,6 +1,7 @@
 package eu.lepicekmichal.signalrkore
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
@@ -267,5 +268,25 @@ class JsonHubProtocolTest {
     @Test
     fun textTransferFormat() {
         assertEquals(TransferFormat.Text, protocol.transferFormat)
+    }
+
+    private fun parsePersonArgument(protocol: JsonHubProtocol) =
+        assertIs<HubMessage.Invocation>(
+            protocol.parseMessages(
+                ("""{"type":1,"target":"Person","arguments":[{"firstName":"John","lastName":"Doe","age":30,"email":"john@example.com"}]}""" + RECORD_SEPARATOR).encodeToByteArray(),
+                logger,
+            ).single()
+        ).arguments.single()
+
+    @Test
+    fun unknownKeysInPayloadsAreIgnoredByDefault() {
+        assertEquals(Person("John", "Doe", 30), assertIs<HubValue.Decodable>(parsePersonArgument(protocol)).decode(Person.serializer()))
+    }
+
+    @Test
+    fun customJsonDecidesHowPayloadsAreDecoded() {
+        val strict = assertIs<HubValue.Decodable>(parsePersonArgument(JsonHubProtocol(Json)))
+
+        assertFailsWith<SerializationException> { strict.decode(Person.serializer()) }
     }
 }

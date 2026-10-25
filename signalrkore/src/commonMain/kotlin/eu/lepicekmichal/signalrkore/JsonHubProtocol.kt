@@ -20,9 +20,10 @@ import kotlinx.serialization.json.put
 /**
  * The JSON hub protocol (`json`, version 1), the default protocol of SignalR.
  *
- * @param json The Json instance that encodes and decodes the payloads of messages (arguments, stream items and results)
+ * @param json The Json instance that encodes and decodes the payloads of messages (arguments, stream items and results).
+ * By default unknown keys are ignored, like in the official SignalR clients.
  */
-class JsonHubProtocol(private val json: Json = Json) : HubProtocol {
+class JsonHubProtocol(private val json: Json = DefaultJson) : HubProtocol {
 
     override val name: String = PROTOCOL_NAME
     override val version: Int = PROTOCOL_VERSION
@@ -155,6 +156,7 @@ class JsonHubProtocol(private val json: Json = Json) : HubProtocol {
     companion object {
         private const val PROTOCOL_NAME = "json"
         private const val PROTOCOL_VERSION = 1
+        private val DefaultJson = Json { ignoreUnknownKeys = true }
     }
 }
 

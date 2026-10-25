@@ -190,6 +190,8 @@ protocol = JsonHubProtocol(
 )
 ```
 
+By default the protocol ignores keys that your models don't declare, like the official SignalR clients. A custom `Json` replaces that default, so set `ignoreUnknownKeys = true` in it if you still want that.
+
 This is useful if you need to configure the JSON serializer with custom settings or modules.
 
 ### Logger

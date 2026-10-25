@@ -34,10 +34,10 @@ val connection = HubConnectionBuilder.create("https://example.com/chathub") {
 }
 ```
 
-To encode payloads with your own `Json` instance, pass it to the protocol:
+By default, payloads are decoded with a `Json` that ignores unknown keys, like the official SignalR clients do, so server objects may have more properties than your models. To encode payloads with your own `Json` instance, pass it to the protocol. It replaces the default, so set `ignoreUnknownKeys = true` in it if you still want that:
 
 ```kotlin
-protocol = JsonHubProtocol(json = Json { ignoreUnknownKeys = true })
+protocol = JsonHubProtocol(json = Json { ignoreUnknownKeys = true; isLenient = true })
 ```
 
 ## MessagePackHubProtocol
@@ -194,7 +194,7 @@ enum class TransferFormat {
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `json` | `Json` | `Json` | The Json instance for payloads |
+| `json` | `Json` | `Json { ignoreUnknownKeys = true }` | The Json instance for payloads |
 
 #### Properties
 

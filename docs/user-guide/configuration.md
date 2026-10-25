@@ -219,6 +219,8 @@ protocol = JsonHubProtocol(
 
 This is useful if you need to configure the JSON serializer with custom settings or modules. The negotiate and handshake responses of the server are always read by the library itself, so this Json instance only affects your payloads.
 
+By default the protocol ignores keys that your models don't declare, like the official SignalR clients. A custom `Json` replaces that default, so set `ignoreUnknownKeys = true` in it if you still want that.
+
 For example, you can register custom serializers for specific types:
 
 ```kotlin
