@@ -1,11 +1,12 @@
 # SignalRKore
 
 [![Maven Central](https://img.shields.io/maven-central/v/eu.lepicekmichal.signalrkore/signalrkore)](https://mvnrepository.com/artifact/eu.lepicekmichal.signalrkore)
-[![Tests](https://github.com/lepicekmichal/SignalRKore/actions/workflows/tests.yml/badge.svg)](https://github.com/lepicekmichal/SignalRKore/actions/workflows/tests.yml)
 [![Documentation](https://img.shields.io/badge/docs-lepicekmichal.github.io-blue.svg?style=flat)](https://lepicekmichal.github.io/SignalRKore/)
 [![Kotlin](https://img.shields.io/badge/kotlin-2.4.20-blue.svg?logo=kotlin)](https://kotlinlang.org)
 [![GitHub License](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Kotlin Weekly](https://img.shields.io/badge/Kotlin%20Weekly-%23416-purple?style=flat)](https://mailchi.mp/kotlinweekly/kotlin-weekly-416)
+
+[![Tests](https://github.com/lepicekmichal/SignalRKore/actions/workflows/tests.yml/badge.svg)](https://github.com/lepicekmichal/SignalRKore/actions/workflows/tests.yml)
 
 ![badge-android](https://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
 ![badge-jvm](https://img.shields.io/badge/platform-jvm-DB413D.svg?style=flat)
@@ -20,7 +21,7 @@ SignalRKore is a Kotlin Multiplatform client library for ASP.NET Core SignalR. I
 |                         | [Official client library](https://learn.microsoft.com/en-us/aspnet/core/signalr/java-client) |             **SignalRKore**             |
 |:------------------------|:--------------------------------------------------------------------------------------------:|:---------------------------------------:|
 | **Technology**          |                                                                                              |                                         |
-| Written in              |                                             Java                                             |                **Kotlin**               |
+| Written in              |                                             Java                                             |                  Kotlin                 |
 | Kotlin Multiplatform    |                                             :x:                                              |          **Android, JVM, iOS**          |
 | Network                 |                                         OkHttp only                                          |                 **Ktor**                |
 | Async                   |                                            RxJava                                            |              **Coroutines**             |
